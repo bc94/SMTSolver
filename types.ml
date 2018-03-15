@@ -5,7 +5,7 @@ type literal = Var of int
 
 type clause = Clause of int * literal list;;
 
-type formula = Formula of clause list;;
+type conjunction = Conjunction of clause list;;
 
 type assignment = Assignment of literal list;;
 
@@ -39,9 +39,14 @@ type less_equal = LessEq of func * number
 type less = Less of number * number;;
 
 type constraint_n = Constraint of int * less_equal
-                   | Constraint of int * less;;
+                   | Constraint of int * less
                    | Not of constraint_n;;
 
+type inequalities = Ineq of constraint_n list;
+
+(* Type to contain both *)
+
+type formula = Formula of conjunction * inequalities;;
 
 
 
