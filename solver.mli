@@ -2,6 +2,8 @@ type token = OPEN_VALIDITY
            | CLOSE_VALIDITY
            | OPEN_DISJUNCTION
            | CLOSE_DISJUNCTION
+           | OPEN_CONJUNCTION
+           | CLOSE_CONJUNCTION
            | OPEN_NOT
            | CLOSE_NOT
            | OPEN_ATOM
@@ -21,3 +23,5 @@ type token = OPEN_VALIDITY
            | NUM 
            | VAR
            | EOF;;
+
+val prog: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> Types.formula option
