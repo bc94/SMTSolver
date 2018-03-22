@@ -1,35 +1,38 @@
-open Core.Std
-open Lexer
-open Lexing
+open String
+open Types
 
-let print_pos outx lexbuf = 
-    let pos = lexbuf.lex_curr_p in
-    fprintf outx "%s:%d:%d" pos.pos_fname
-        pos.pos_lnum (pos.pos_cnum - pos.pos_bol +  1)
+let rec print_num_type n = 
+    match n with
+        | Sum (x, y) -> "Sum (" ^ (print_num_type x) ^ ", " ^ (print_num_type y) ^ ")" 
+        | Prod (x, y) -> "Prod (" ^ (print_num_type x) ^ ", " ^ (print_num_type y) ^ ")"
+        | Num (x) -> "Num " ^ (string_of_int x)
+        | Var (x) -> "Var " ^ x
+        | _ -> failwith "[Invalid formula]: print_num_type"
 
-let parse_with_error lexbuf = 
-    try Parser.prog Lexer.read lexbuf with
-        | SyntaxError msg -> 
-          fprintf stderr "%a: %s\n" print_pos lexbuf msg;
-          None
-        | Parser.Error ->
-          fprintf stderr "%a: syntax error\n" print_pos lexbuf;
-          exit (-1)
+let print_less_equal le =
+    match le with
+        | LessEq (x, y) -> "LessEq (" ^ (print_num_type x) ^ ", " ^ (print_num_type y) ^ ")"
+        | _ -> failwith "[Invalid formula]: print_less_equal"
 
-let parse lexbuf = 
-    match parse_with_error lexbuf with
-        | Some value -> value
-        | None -> ()
+let print_constraint_n c = 
+    match c with
+        | Constraint (x, y) ->  "Constraint (" ^ (string_of_int x) ^ ", (" ^ (print_less_equal y) ^ "))"        
+        | _ -> failwith "[Invalid formula]: print_constraint_n"
 
-let loop filename () =
-    let inx = In_channel.create filename in
-        let lexbuf = Lexing.from_channel inx in
-            lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename};
-            parse lexbuf;
-            In_channel.close inx
+let rec print_element_list el = 
+    match el with
+        | x :: xs -> (print_element x) ^ ", " ^ (print_element_list xs)
+        | [] -> "[]"
 
-let () =
-  Command.basic ~summary:"Parse and display formula"
-    Command.Spec.(empty +> anon ("filename" %: file))
-    let f = loop 
-|> Command.run
+and print_element e =
+    match e with 
+        | Not (x) -> "Not (" ^ (print_element x) ^ ")"
+        | Conjunction (x) -> "Conjunction ([" ^ (print_element_list x) ^ "])"
+        | Disjunction (x) -> "Disjunction ([" ^ (print_element_list x) ^ "])"
+        | Atom (x) -> "Atom (" ^ (print_constraint_n x) ^ ")"
+        | _ -> failwith "[Invalid formula]: print_element"
+
+let print_formula f = 
+    match f with
+        | Formula (x) -> "Formula (" ^ (print_element x) ^ ")"
+        | _ -> failwith "[Invalid formula]"

@@ -24,7 +24,7 @@ type element = Atom of constraint_n
              | Disjunction of element list
              | Not of element;;
 
-type formula = Formula of element list;;
+type formula = Formula of element;;
 
 
 
