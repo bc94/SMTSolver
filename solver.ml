@@ -1,10 +1,16 @@
 open String
 open Types
+open Core.Std
 
-let rec print_num_type n = 
+let rec print_num_type_list nl = 
+    match nl with
+        | x :: xs -> (print_num_type x) ^ ", " ^ (print_num_type_list xs)
+        | [] -> "[]"
+
+and print_num_type n = 
     match n with
-        | Sum (x, y) -> "Sum (" ^ (print_num_type x) ^ ", " ^ (print_num_type y) ^ ")" 
-        | Prod (x, y) -> "Prod (" ^ (print_num_type x) ^ ", " ^ (print_num_type y) ^ ")"
+        | Sum (xs) -> "Sum ([" ^ (print_num_type_list xs) ^ "])" 
+        | Prod (xs) -> "Prod ([" ^ (print_num_type_list xs) ^ "])"
         | Num (x) -> "Num " ^ (string_of_int x)
         | Var (x) -> "Var " ^ x
         | _ -> failwith "[Invalid formula]: print_num_type"
@@ -34,5 +40,5 @@ and print_element e =
 
 let print_formula f = 
     match f with
-        | Formula (x) -> "Formula (" ^ (print_element x) ^ ")"
+        | Formula (x) -> printf "Formula (%s)\n" (print_element x)
         | _ -> failwith "[Invalid formula]"

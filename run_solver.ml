@@ -16,9 +16,9 @@ let parse_with_error lexbuf =
           fprintf stderr "%a: syntax error\n" print_pos lexbuf;
           exit (-1)
 
-let parse lexbuf = 
+let rec parse lexbuf = 
     match parse_with_error lexbuf with
-        | Some value -> printf "%s\n" Solver.print_formula value;
+        | Some value -> Solver.print_formula value;
                         parse lexbuf
         | None -> ()
 

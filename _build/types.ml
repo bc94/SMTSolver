@@ -1,7 +1,7 @@
 (* Types for the actual constraints *)
 
-type num_type = Sum of num_type * num_type
-              | Prod of num_type * num_type
+type num_type = Sum of num_type list
+              | Prod of num_type list
               | Num of int
               | Var of string;;
 

@@ -81,12 +81,16 @@ num:
 num_l:
     | n = NUM   { Num (n - 1) }
 
+num_list:
+    | n = num; nl = num_list    { n :: nl }
+    | (* empty *)   { [] }
+
 sum:
-    | OPEN_SUM; n1 = num; n2 = num; CLOSE_SUM   { Sum (n1, n2) }
+    | OPEN_SUM; nl = num_list; CLOSE_SUM   { Sum (nl) }
     ;
 
 product:
-    | OPEN_PRODUCT; n1 = num; n2 = num; CLOSE_PRODUCT   { Prod (n1, n2) }
+    | OPEN_PRODUCT; nl = num_list; CLOSE_PRODUCT   { Prod (nl) }
     ;
 
 number:
