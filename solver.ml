@@ -2,6 +2,8 @@ open String
 open Types
 open Core.Std
 
+(* Functions for printing a formula *)
+
 let rec print_num_type_list nl = 
     match nl with
         | x :: xs -> (print_num_type x) ^ ", " ^ (print_num_type_list xs)
@@ -22,7 +24,7 @@ let print_less_equal le =
 
 let print_constraint_n c = 
     match c with
-        | Constraint (x, y) ->  "Constraint (" ^ (string_of_int x) ^ ", (" ^ (print_less_equal y) ^ "))"        
+        | Constraint (x) ->  "Constraint (" ^ (print_less_equal x) ^ "))"        
         | _ -> failwith "[Invalid formula]: print_constraint_n"
 
 let rec print_element_list el = 

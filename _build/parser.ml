@@ -449,7 +449,7 @@ and _menhir_goto_num : _menhir_env -> 'ttv_tail -> _menhir_state -> (Types.num_t
             let _1 = () in
             let _v : (Types.constraint_n) = 
 # 63 "parser.mly"
-                                                       ( Constraint (0, np) )
+                                                       ( Constraint np )
 # 454 "parser.ml"
              in
             _menhir_goto_constr _menhir_env _menhir_stack _v
@@ -501,7 +501,7 @@ and _menhir_goto_num : _menhir_env -> 'ttv_tail -> _menhir_state -> (Types.num_t
                 let _1 = () in
                 let _v : (Types.constraint_n) = 
 # 62 "parser.mly"
-                                              ( Constraint (0, np) )
+                                              ( Constraint np )
 # 506 "parser.ml"
                  in
                 _menhir_goto_constr _menhir_env _menhir_stack _v

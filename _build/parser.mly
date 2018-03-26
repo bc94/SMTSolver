@@ -59,8 +59,8 @@ literal:
     ;
 
 constr:
-    | OPEN_LESS; np = num_pair_l; CLOSE_LESS  { Constraint (0, np) }
-    | OPEN_LESS_EQ; np = num_pair_le; CLOSE_LESS_EQ    { Constraint (0, np) }
+    | OPEN_LESS; np = num_pair_l; CLOSE_LESS  { Constraint np }
+    | OPEN_LESS_EQ; np = num_pair_le; CLOSE_LESS_EQ    { Constraint np }
     ;
 
 num_pair_l:
