@@ -2,6 +2,30 @@ open String
 open Types
 open Core.Std
 
+(* Tseitin transformation to transform a formula into CNF.*)
+
+(* Argument f is the formula and argument n is a counting *)
+(* variable used to introduce the new variables needed in *)
+(* the transformation algorithm *)
+
+let transform_elem_list el n =
+    match el with
+        | Not (x) -> (Disjunction ([Atom (AuxVar n), Atom (AuxVar (n + 1))])) @ 
+                     (Disjunction ([Not (Atom (AuxVar n)), Not (Atom (AuxVar (n + 1)))])) @
+                     transform_elem_list x (n + 1)
+        | Conjunction (xs) ->         
+        | Disjunction (xs) ->
+        | Atom (x) -> (Disjunction ([Not (Atom (AuxVar n)), Atom x])) @ 
+                      (Disjunction ([Not (Atom x), Atom (AuxVar n)]))
+        | _ -> failwith "[Invalid formula]: transform_elem_list";;
+
+let tseitin_transformation_n f n = 
+    match f with
+        | Formula (x) -> Formula (Conjunction ( (Atom (AuxVar n)) :: (transform_elem_list x n)))
+        | _ -> failwith "[Invalid formula]: tseitin_transformation_n"
+
+let tseitin_transformation f = tseitin_transformation_n f 0;;
+
 (* Functions for printing a formula *)
 
 let rec print_num_type_list nl = 

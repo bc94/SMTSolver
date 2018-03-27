@@ -7,7 +7,8 @@ type num_type = Sum of num_type list
 
 type less_equal = LessEq of num_type * num_type;;
 
-type constraint_n = Constraint of less_equal;;
+type constraint_n = Constraint of less_equal
+                  | AuxVar of int;;
 
 (* Boolean operators etc. *)
 
