@@ -1,2 +1,3 @@
 _build/
 testdata/
+run_solver.native
