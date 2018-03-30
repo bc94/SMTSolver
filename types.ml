@@ -12,9 +12,7 @@ type constraint_n = Constraint of less_equal
 
 (* Boolean operators etc. *)
 
-type clause = Clause of constraint_n list;;
-
-type assignment = Assignment of constraint_n * bool list;;
+type assignment = Assignment of (constraint_n * bool) list;;
 
 type element = Atom of constraint_n
              | Conjunction of element list

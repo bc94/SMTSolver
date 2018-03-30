@@ -3,6 +3,70 @@ open Types
 open List
 open Core.Std
 
+(* Utilities for DPLL *)
+
+let rec is_assigned (assignment : assignment) (literal : element) =
+    match assignment with
+        | Assignment (x :: xs) -> (
+                                   match (x, literal) with 
+                                    | ((y, b), Atom (z)) -> ( 
+                                                             match (compare y z) with 
+                                                             | 0 -> true
+                                                             | _ -> is_assigned (Assignment xs) literal
+                                                            )
+                                    | ((y, b), Not (Atom (z))) -> (
+                                                                   match (compare y z) with 
+                                                                   | 0 -> true
+                                                                   | _ -> is_assigned (Assignment xs) literal
+                                                                  )
+                                    | _ -> failwith "[Invalid argument] second argument is not a literal"
+                                  )
+        | Assignment ([]) -> false
+        | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;
+
+let rec is_true (assignment : assignment) (literal : element) = 
+    match assignment with
+        | Assignment (x :: xs) -> (
+                                   match (x, literal) with 
+                                    | ((y, true), Atom (z)) -> ( 
+                                                                match (compare y z) with 
+                                                                | 0 -> true
+                                                                | _ -> is_assigned (Assignment xs) literal
+                                                               )
+                                    | ((y, false), Not (Atom (z))) -> (
+                                                                       match (compare y z) with 
+                                                                       | 0 -> true
+                                                                       | _ -> is_assigned (Assignment xs) literal
+                                                                      )   
+                                    | _ -> failwith "[Invalid argument] second argument is not a literal"
+                                  )
+        | Assignment ([]) -> false
+        | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;        
+
+let rec is_clause_satisfied assignment clause =
+    match clause with 
+        | Disjunction (x :: xs) -> (
+                                    match is_true assignment x with
+                                    | true -> true
+                                    | false -> is_clause_satisfied assignment (Disjunction (xs))
+                                   )
+        | Disjunction ([]) -> false
+        | _ -> failwith "[Invalid argument] second argument is not a Disjunction of element list"
+        
+(* Basic DPLL *)
+
+let rec unit assignment formula = 
+    match (formula, assignment) with 
+        | (Formula (Conjunction (x :: xs)), Assignment ys) -> (
+                                                               match x with
+                                                                | Atom (y) -> unit (Assignment (ys @ [(y, true)])) (Formula (Conjunction (xs)))
+                                                                | Not (Atom (y)) -> unit (Assignment (ys @ [(y, false)])) (Formula (Conjunction (xs)))
+                                                                | Disjunction (ys) -> unit assignment (Formula (Conjunction (xs)))
+                                                                | _ -> failwith "[Invalid argument] second argument is not a formula in CNF"
+                                                              )
+        | (Formula (Conjunction ([])), Assignment ys) -> assignment
+        | _ -> failwith "[Invalid argument] second argument is not a formula in CNF"
+
 (* Tseitin transformation to transform a formula into CNF.*)
 
 (* Argument f is the formula and arguments n_aux and n_last are *) 
