@@ -7,65 +7,104 @@ open Core.Std
 
 let rec is_assigned (assignment : assignment) (literal : element) =
     match assignment with
-        | Assignment (x :: xs) -> (
-                                   match (x, literal) with 
-                                    | ((y, b), Atom (z)) -> ( 
-                                                             match (compare y z) with 
-                                                             | 0 -> true
-                                                             | _ -> is_assigned (Assignment xs) literal
-                                                            )
-                                    | ((y, b), Not (Atom (z))) -> (
-                                                                   match (compare y z) with 
-                                                                   | 0 -> true
-                                                                   | _ -> is_assigned (Assignment xs) literal
-                                                                  )
-                                    | _ -> failwith "[Invalid argument] second argument is not a literal"
-                                  )
         | Assignment ([]) -> false
-        | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;
-
-let rec is_true (assignment : assignment) (literal : element) = 
-    match assignment with
         | Assignment (x :: xs) -> (
                                    match (x, literal) with 
-                                    | ((y, true), Atom (z)) -> ( 
+                                    | ((y, b, d), Atom (z)) -> ( 
                                                                 match (compare y z) with 
                                                                 | 0 -> true
                                                                 | _ -> is_assigned (Assignment xs) literal
                                                                )
-                                    | ((y, false), Not (Atom (z))) -> (
-                                                                       match (compare y z) with 
-                                                                       | 0 -> true
-                                                                       | _ -> is_assigned (Assignment xs) literal
-                                                                      )   
+                                    | ((y, b, d), Not (Atom (z))) -> (
+                                                                      match (compare y z) with 
+                                                                        | 0 -> true
+                                                                        | _ -> is_assigned (Assignment xs) literal
+                                                                     )
                                     | _ -> failwith "[Invalid argument] second argument is not a literal"
                                   )
+        | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;
+
+let rec is_true (assignment : assignment) (literal : element) = 
+    match assignment with
         | Assignment ([]) -> false
+        | Assignment (x :: xs) -> (
+                                   match (x, literal) with 
+                                    | ((y, true, d), Atom (z)) -> ( 
+                                                                    match (compare y z) with 
+                                                                    | 0 -> true
+                                                                    | _ -> is_assigned (Assignment xs) literal
+                                                                  )
+                                    | ((y, false, d), Not (Atom (z))) -> (
+                                                                          match (compare y z) with 
+                                                                            | 0 -> true
+                                                                            | _ -> is_assigned (Assignment xs) literal
+                                                                         )   
+                                    | _ -> failwith "[Invalid argument] second argument is not a literal"
+                                  )
         | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;        
 
 let rec is_clause_satisfied assignment clause =
     match clause with 
+        | Disjunction ([]) -> false
         | Disjunction (x :: xs) -> (
                                     match is_true assignment x with
                                     | true -> true
                                     | false -> is_clause_satisfied assignment (Disjunction (xs))
                                    )
-        | Disjunction ([]) -> false
-        | _ -> failwith "[Invalid argument] second argument is not a Disjunction of element list"
+        | _ -> failwith "[Invalid argument] second argument is not a Disjunction of element list";;
+
+let rec unassigned_or_true_l assignment clause ls =
+    match clause with
+        | Disjunction ([]) -> ls
+        | Disjunction (x :: xs) -> (
+                                   match (is_true assignment x) with
+                                    | false -> unassigned_or_true_l assignment (Disjunction (xs)) (ls @ [x])
+                                    | true -> unassigned_or_true_l assignment (Disjunction (xs)) ls
+                                    | _ -> failwith "[Invalid argument] unassigned_or_truel"
+                                  )
+        | _ -> failwith "[Invalid argument] unassigned_or_true_l";;
+
+let unassigned_or_true assignment clause = unassigned_or_true_l assignment clause [];;
+
+let unit_propagation_applicable assignment clause =
+    match (unassigned_or_true assignment clause) with
+        | [] -> []
+        | xs -> (
+                 match (length xs, is_assigned assignment (hd xs)) with
+                    | (1, false) -> xs
+                    | (_, _) -> []
+                )
+        | _ -> failwith "[Invalid argument] unit_propagation_applicable";;
         
 (* Basic DPLL *)
 
 let rec unit assignment formula = 
     match (formula, assignment) with 
+        | (Formula (Conjunction ([])), Assignment ys) -> assignment
         | (Formula (Conjunction (x :: xs)), Assignment ys) -> (
                                                                match x with
-                                                                | Atom (y) -> unit (Assignment (ys @ [(y, true)])) (Formula (Conjunction (xs)))
-                                                                | Not (Atom (y)) -> unit (Assignment (ys @ [(y, false)])) (Formula (Conjunction (xs)))
+                                                                | Atom (y) -> unit (Assignment (ys @ [(y, true, false)])) (Formula (Conjunction (xs)))
+                                                                | Not (Atom (y)) -> unit (Assignment (ys @ [(y, false, false)])) (Formula (Conjunction (xs)))
                                                                 | Disjunction (ys) -> unit assignment (Formula (Conjunction (xs)))
                                                                 | _ -> failwith "[Invalid argument] second argument is not a formula in CNF"
                                                               )
-        | (Formula (Conjunction ([])), Assignment ys) -> assignment
         | _ -> failwith "[Invalid argument] second argument is not a formula in CNF"
+
+let rec unit_propagation assignment formula =
+    match (formula, assignment) with 
+        | (Formula (Conjunction ([])), Assignment ys) -> Assignment ys
+        | (Formula (Conjunction (x :: xs)), Assignment ys) -> ( 
+                                                               match (unit_propagation_applicable assignment x) with
+                                                                | [] -> unit_propagation (Assignment (ys)) (Formula (Conjunction (xs)))
+                                                                | zs -> (
+                                                                         match zs with
+                                                                            | [Atom (z)] -> unit_propagation (Assignment (ys @ [(z, true, false)])) (Formula (Conjunction (xs)))
+                                                                            | [Not (Atom (z))] -> unit_propagation (Assignment (ys @ [(z, false, false)])) (Formula (Conjunction (xs)))
+                                                                            | _ -> failwith "[Invalid argument] unit_propagation"
+                                                                        )
+                                                                | _ -> failwith "[Invalid argument] unit_propagation"
+                                                              )
+        | _ -> failwith "[Invaid argument] unit_propagation";;
 
 (* Tseitin transformation to transform a formula into CNF.*)
 
@@ -107,8 +146,8 @@ let tseitin_transformation f = tseitin_transformation_n f 0 0;;
 
 let rec print_num_type_list nl = 
     match nl with
-        | x :: xs -> (print_num_type x) ^ ", " ^ (print_num_type_list xs)
         | [] -> "[]"
+        | x :: xs -> (print_num_type x) ^ ", " ^ (print_num_type_list xs)
 
 and print_num_type n = 
     match n with
@@ -131,8 +170,8 @@ let print_constraint_n c =
 
 let rec print_element_list el = 
     match el with
-        | x :: xs -> (print_element x) ^ ", " ^ (print_element_list xs)
         | [] -> "[]"
+        | x :: xs -> (print_element x) ^ ", " ^ (print_element_list xs)
 
 and print_element e =
     match e with 
