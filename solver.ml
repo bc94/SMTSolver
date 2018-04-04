@@ -55,6 +55,16 @@ let rec is_clause_satisfied assignment clause =
 
 let rec unassigned_or_true_l assignment clause ls =
     match clause with
+        | Atom (x) -> (
+                       match (is_true assignment (Atom (x))) with
+                        | false -> [Atom (x)]
+                        | true -> []
+                      )
+        | Not (Atom (x)) -> (
+                             match (is_true assignment (Not (Atom (x)))) with
+                                | false -> [Not (Atom (x))]
+                                | true -> []
+                            )
         | Disjunction ([]) -> ls
         | Disjunction (x :: xs) -> (
                                    match (is_true assignment x) with
@@ -75,8 +85,37 @@ let unit_propagation_applicable assignment clause =
                     | (_, _) -> []
                 )
         | _ -> failwith "[Invalid argument] unit_propagation_applicable";;
+
+let rec model_found assignment formula = 
+    match formula with
+        | Formula (Conjunction ([])) -> true 
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match (is_clause_satisfied assignment x) with 
+                                                | true -> model_found assignment (Formula (Conjunction (xs)))
+                                                | false -> false
+                                             )
+        | _ -> failwith "[Invalid argument] model_found";;
+
+let rec find_conflict assignment formula =
+    match formula with
+        | Formula (Conjunction ([])) -> []
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match (unassigned_or_true assignment x) with 
+                                                | [] -> [x]
+                                                | x :: xs -> find_conflict assignment (Formula (Conjunction (xs)))   
+                                             )
+        (* Empty list in middle of conjunction possible? if so, another case is needed *)
+        | _ -> failwith "[Invalid argument] find_conflict";;
+
+let conflict_exists assignment formula = 
+    match (find_conflict assignment formula) with 
+        | [] -> false
+        | x :: xs -> true
+        | _ -> failwith "[Invalid argument] conflict_exists";;
         
+(**************)
 (* Basic DPLL *)
+(**************)
 
 let rec unit assignment formula = 
     match (formula, assignment) with 
