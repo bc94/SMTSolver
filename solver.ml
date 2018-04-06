@@ -145,6 +145,26 @@ let rec unit_propagation assignment formula =
                                                               )
         | _ -> failwith "[Invaid argument] unit_propagation";;
 
+let rec decision assignment formula = 
+    match (formula, assignment) with
+        | (Formula (Conjunction ([])), Assignment ys) -> Assignment ys
+        | (Formula (Conjunction (x :: xs)), Assignment ys) -> (
+                                                               match (is_clause_satisfied assignment x, x) with
+                                                                | (true, _) -> decision (Assignment ys) (Formula (Conjunction (xs)))
+                                                                | (false, Atom (y)) -> (
+                                                                                        match (is_assigned assignment x) with
+                                                                                            | true -> decision (Assignment ys) (Formula (Conjunction (xs)))
+                                                                                            | false -> Assignment (ys @ [(y, true, true)])
+                                                                                       )
+                                                                | (false, Not (Atom (y))) -> (
+                                                                                              match (is_assigned assignment x) with
+                                                                                                | true -> decision (Assignment ys) (Formula (Conjunction (xs)))
+                                                                                                | false -> Assignment (ys @ [(y, false, true)])
+                                                                                             )
+                                                                | _ -> failwith "[Invalid argument] decision"
+                                                              )
+        | _ -> failwith "[Invalid argument] decision";;
+
 (* Tseitin transformation to transform a formula into CNF.*)
 
 (* Argument f is the formula and arguments n_aux and n_last are *) 
