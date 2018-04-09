@@ -10,16 +10,16 @@ let rec is_assigned (assignment : assignment) (literal : element) =
         | Assignment ([]) -> false
         | Assignment (x :: xs) -> (
                                    match (x, literal) with 
-                                    | ((y, b, d), Atom (z)) -> ( 
-                                                                match (compare y z) with 
-                                                                | 0 -> true
-                                                                | _ -> is_assigned (Assignment xs) literal
-                                                               )
-                                    | ((y, b, d), Not (Atom (z))) -> (
-                                                                      match (compare y z) with 
-                                                                        | 0 -> true
-                                                                        | _ -> is_assigned (Assignment xs) literal
-                                                                     )
+                                    | ((y, b, d, dl), Atom (z)) -> ( 
+                                                                    match (compare y z) with 
+                                                                    | 0 -> true
+                                                                    | _ -> is_assigned (Assignment xs) literal
+                                                                   )
+                                    | ((y, b, d, dl), Not (Atom (z))) -> (
+                                                                          match (compare y z) with 
+                                                                            | 0 -> true
+                                                                            | _ -> is_assigned (Assignment xs) literal
+                                                                         )
                                     | _ -> failwith "[Invalid argument] second argument is not a literal"
                                   )
         | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;
@@ -29,16 +29,16 @@ let rec is_true (assignment : assignment) (literal : element) =
         | Assignment ([]) -> false
         | Assignment (x :: xs) -> (
                                    match (x, literal) with 
-                                    | ((y, true, d), Atom (z)) -> ( 
-                                                                    match (compare y z) with 
-                                                                    | 0 -> true
-                                                                    | _ -> is_assigned (Assignment xs) literal
-                                                                  )
-                                    | ((y, false, d), Not (Atom (z))) -> (
-                                                                          match (compare y z) with 
-                                                                            | 0 -> true
-                                                                            | _ -> is_assigned (Assignment xs) literal
-                                                                         )   
+                                    | ((y, true, d, dl), Atom (z)) -> ( 
+                                                                       match (compare y z) with 
+                                                                        | 0 -> true
+                                                                        | _ -> is_assigned (Assignment xs) literal
+                                                                      )
+                                    | ((y, false, d, dl), Not (Atom (z))) -> (
+                                                                              match (compare y z) with 
+                                                                                | 0 -> true
+                                                                                | _ -> is_assigned (Assignment xs) literal
+                                                                             )   
                                     | _ -> failwith "[Invalid argument] second argument is not a literal"
                                   )
         | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;        
@@ -122,44 +122,44 @@ let rec unit assignment formula =
         | (Formula (Conjunction ([])), Assignment ys) -> assignment
         | (Formula (Conjunction (x :: xs)), Assignment ys) -> (
                                                                match x with
-                                                                | Atom (y) -> unit (Assignment (ys @ [(y, true, false)])) (Formula (Conjunction (xs)))
-                                                                | Not (Atom (y)) -> unit (Assignment (ys @ [(y, false, false)])) (Formula (Conjunction (xs)))
+                                                                | Atom (y) -> unit (Assignment (ys @ [(y, true, false, 0)])) (Formula (Conjunction (xs)))
+                                                                | Not (Atom (y)) -> unit (Assignment (ys @ [(y, false, false, 0)])) (Formula (Conjunction (xs)))
                                                                 | Disjunction (ys) -> unit assignment (Formula (Conjunction (xs)))
                                                                 | _ -> failwith "[Invalid argument] second argument is not a formula in CNF"
                                                               )
         | _ -> failwith "[Invalid argument] second argument is not a formula in CNF"
 
-let rec unit_propagation assignment formula =
+let rec unit_propagation assignment formula dl =
     match (formula, assignment) with 
         | (Formula (Conjunction ([])), Assignment ys) -> Assignment ys
         | (Formula (Conjunction (x :: xs)), Assignment ys) -> ( 
                                                                match (unit_propagation_applicable assignment x) with
-                                                                | [] -> unit_propagation (Assignment (ys)) (Formula (Conjunction (xs)))
+                                                                | [] -> unit_propagation (Assignment (ys)) (Formula (Conjunction (xs))) dl
                                                                 | zs -> (
                                                                          match zs with
-                                                                            | [Atom (z)] -> unit_propagation (Assignment (ys @ [(z, true, false)])) (Formula (Conjunction (xs)))
-                                                                            | [Not (Atom (z))] -> unit_propagation (Assignment (ys @ [(z, false, false)])) (Formula (Conjunction (xs)))
+                                                                            | [Atom (z)] -> unit_propagation (Assignment (ys @ [(z, true, false, dl)])) (Formula (Conjunction (xs))) dl
+                                                                            | [Not (Atom (z))] -> unit_propagation (Assignment (ys @ [(z, false, false, dl)])) (Formula (Conjunction (xs))) dl
                                                                             | _ -> failwith "[Invalid argument] unit_propagation"
                                                                         )
                                                                 | _ -> failwith "[Invalid argument] unit_propagation"
                                                               )
         | _ -> failwith "[Invaid argument] unit_propagation";;
 
-let rec decision assignment formula = 
+let rec decision assignment formula dl = 
     match (formula, assignment) with
-        | (Formula (Conjunction ([])), Assignment ys) -> Assignment ys
+        | (Formula (Conjunction ([])), Assignment ys) -> (Assignment ys, dl)
         | (Formula (Conjunction (x :: xs)), Assignment ys) -> (
                                                                match (is_clause_satisfied assignment x, x) with
-                                                                | (true, _) -> decision (Assignment ys) (Formula (Conjunction (xs)))
+                                                                | (true, _) -> decision (Assignment ys) (Formula (Conjunction (xs))) dl
                                                                 | (false, Atom (y)) -> (
                                                                                         match (is_assigned assignment x) with
-                                                                                            | true -> decision (Assignment ys) (Formula (Conjunction (xs)))
-                                                                                            | false -> Assignment (ys @ [(y, true, true)])
+                                                                                            | true -> decision (Assignment ys) (Formula (Conjunction (xs))) dl
+                                                                                            | false -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1))
                                                                                        )
                                                                 | (false, Not (Atom (y))) -> (
                                                                                               match (is_assigned assignment x) with
-                                                                                                | true -> decision (Assignment ys) (Formula (Conjunction (xs)))
-                                                                                                | false -> Assignment (ys @ [(y, false, true)])
+                                                                                                | true -> decision (Assignment ys) (Formula (Conjunction (xs))) dl
+                                                                                                | false -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1))
                                                                                              )
                                                                 | _ -> failwith "[Invalid argument] decision"
                                                               )

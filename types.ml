@@ -19,8 +19,9 @@ type constraint_n = Constraint of less_equal
 (* The first bool is the assigned truth value *)
 (* the second bool is 'true' if the variable's *)
 (* assignment was the result of the 'decide' rule *)
-(* and 'false'  otherwise *)
-type assignment = Assignment of (constraint_n * bool * bool) list;;
+(* and 'false'  otherwise and the final value is *)
+(* the current decision level *)
+type assignment = Assignment of (constraint_n * bool * bool * int) list;;
 
 type element = Atom of constraint_n
              | Conjunction of element list
