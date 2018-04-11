@@ -112,7 +112,16 @@ let conflict_exists assignment formula =
         | [] -> false
         | x :: xs -> true
         | _ -> failwith "[Invalid argument] conflict_exists";;
-        
+
+let rec get_decision_literals_l assignment ls = 
+    match assignment with 
+        | Assignment ([]) -> ls
+        | Assignment ((c, v, true, dl) :: xs) -> (get_decision_literals_l (Assignment xs) (ls @ [(c, v, true, dl)]))
+        | Assignment ((c, v, false, dl) :: xs) -> (get_decision_literals_l (Assignment xs) ls)
+        | _ -> failwith "[Invalid argument] get_decision_literals";;
+
+let get_decision_literals assignment = Assignment (get_decision_literals_l assignment []);;
+
 (**************)
 (* Basic DPLL *)
 (**************)
@@ -164,6 +173,88 @@ let rec decision assignment formula dl =
                                                                 | _ -> failwith "[Invalid argument] decision"
                                                               )
         | _ -> failwith "[Invalid argument] decision";;
+
+
+(*************************************************************************)
+(* Auxiliary functions for backjump (some use unit and unit_propagation) *)
+(*************************************************************************)
+
+let rec is_still_conflict assignment formula clause =
+    match assignment with
+        | [] -> false 
+        | x :: xs -> (
+                      match (unassigned_or_true (unit_propagation (unit (Assignment (assignment)) formula) formula 0) clause) with
+                        | [] -> true 
+                        | y :: ys -> false
+                     )
+        | _ -> failwith "[Invalid argument] is_still_conflict";;
+
+let rec find_minimal_i_l assignment formula clause ls =
+    match (is_still_conflict ls formula clause) with
+        | true -> ls
+        | false -> find_minimal_i_l (tl assignment) formula clause (ls @ (hd assignment))
+        | _ -> failwith "[Invalid argument] find_minimal_i";;
+
+let find_minimal_i assignment formula clause = find_minimal_i_l assignment formula clause [];;
+
+let rec transform_to_neg_clause assignment =
+    match assignment with 
+        | Assignment ([]) -> []
+        | Assignment ((c, true, d, dl) :: xs) -> [Not (Atom c)] @ (transform_to_neg_clause (Assignment xs))
+        | Assignment ((c, false, d, dl) :: xs) -> [Atom c] @ (transform_to_neg_clause (Assignment xs))
+        | _ -> failwith "[Invalid argument] transform_to_neg_clause";;
+
+let rec find_backjump_clause_l assignment formula clause ls = 
+    match (is_still_conflict (ls @ (hd (rev assignment))) formula clause) with 
+        | true -> ls @ (hd (rev assignment))
+        | false -> find_backjump_clause_l (tl assignment) formula clause (ls @ (hd assignment))
+        | _ -> failwith "[Invalid argument] find_backjump_clause";;
+
+let find_backjump_clause assignment formula clause = Disjunction (transform_to_neg_clause (Assignment (find_backjump_clause_l assignment formula clause [])));;
+        
+(* Get target decision level for backjumping. *)
+(* Relies on increasing order of decision levels in the assignment *)
+let get_decision_level assignment formula clause = 
+    match (find_backjump_clause_l assignment formula clause []) with
+    | [] -> failwith "[Invalid argument] get_decision_level: assignment empty"
+    | [x] -> failwith "[Invalid argument] get_decision_level: assignment contains just one literal"
+    | xs-> (
+            match (hd (tl (rev xs))) with
+            | (c, v, d, dl) -> dl
+            | _ -> failwith "[Invalid argument] get_decison_level"
+           )
+    | _ -> failwith "[Invalid argument] get_decision_level";;
+
+(* TODO: get_current_decision_level for after backjump *)
+
+(* Backjump without learning as of now *)
+let rec backjump_rec assignment dl clause ls = 
+    match assignment with
+        | Assignment ([]) -> failwith "[Invalid argument] backjump"
+        | Assignment ((c, v, d, l) :: xs) -> (
+                                              match (compare l dl) with
+                                                | 0 -> ( 
+                                                        match clause with
+                                                            | Disjunction (ys) -> (
+                                                                                   match (hd (rev ys)) with
+                                                                                    | Atom (y) -> ls @ [(c, v, d, l)] @ [(y, true, false, l)]
+                                                                                    | Not (Atom (y)) -> ls @ [(c, v, d, l)] @ [(y, false, false, l)]
+                                                                                    | _ -> failwith "[Invalid argument] backjump"
+                                                                                  )
+                                                            | _ -> failwith "[Invalid argument] backjump"
+                                                       )
+                                                | -1 -> backjump_rec (Assignment (xs)) dl clause (ls @ [(c, v, d, l)])
+                                                | _ -> failwith "[Invalid argument] backjump"
+                                             )
+        | _ -> failwith "[Invalid argument] backjump";;
+
+let backjump assignment formula = 
+    match assignment with 
+        | Assignment (xs) -> Assignment (backjump_rec assignment
+                                                      (get_decision_level xs formula (find_conflict assignment formula)) 
+                                                      (find_backjump_clause assignment formula (find_conflict assignment formula))
+                                                      [])
+        | _ -> failwith "[Invalid argument] backjump";;
 
 (* Tseitin transformation to transform a formula into CNF.*)
 
