@@ -204,17 +204,17 @@ let rec transform_to_neg_clause assignment =
         | Assignment ((c, false, d, dl) :: xs) -> [Atom c] @ (transform_to_neg_clause (Assignment xs))
         | _ -> failwith "[Invalid argument] transform_to_neg_clause";;
 
-let rec find_backjump_clause_l assignment formula clause ls = 
-    match (is_still_conflict (ls @ (hd (rev assignment))) formula clause) with 
-        | true -> ls @ (hd (rev assignment))
-        | false -> find_backjump_clause_l (tl assignment) formula clause (ls @ (hd assignment))
+let rec find_backjump_clause_l (assignment : (constraint_n * bool * bool * int) list) formula clause ls = 
+    match (is_still_conflict (ls @ [(hd (rev assignment))]) formula clause) with 
+        | true -> ls @ [(hd (rev assignment))]
+        | false -> find_backjump_clause_l (tl assignment) formula clause (ls @ [(hd assignment)])
         | _ -> failwith "[Invalid argument] find_backjump_clause";;
 
 let find_backjump_clause assignment formula clause = Disjunction (transform_to_neg_clause (Assignment (find_backjump_clause_l assignment formula clause [])));;
         
 (* Get target decision level for backjumping. *)
 (* Relies on increasing order of decision levels in the assignment *)
-let get_decision_level assignment formula clause = 
+let get_decision_level (assignment : (constraint_n * bool * bool * int) list) formula clause = 
     match (find_backjump_clause_l assignment formula clause []) with
     | [] -> failwith "[Invalid argument] get_decision_level: assignment empty"
     | [x] -> failwith "[Invalid argument] get_decision_level: assignment contains just one literal"
@@ -225,7 +225,14 @@ let get_decision_level assignment formula clause =
            )
     | _ -> failwith "[Invalid argument] get_decision_level";;
 
-(* TODO: get_current_decision_level for after backjump *)
+let get_current_decision_level assignment = 
+    match assignment with 
+        | Assignment ([]) -> failwith "[Invalid argument] get_current_decision_level"
+        | Assignment (xs) -> (
+                              match (hd (rev xs)) with
+                                | (c, v, d, dl) -> dl 
+                             )
+        | _ -> failwith "[Invalid argument] get_current_decision_level";;
 
 (* Backjump without learning as of now *)
 let rec backjump_rec assignment dl clause ls = 
@@ -251,8 +258,8 @@ let rec backjump_rec assignment dl clause ls =
 let backjump assignment formula = 
     match assignment with 
         | Assignment (xs) -> Assignment (backjump_rec assignment
-                                                      (get_decision_level xs formula (find_conflict assignment formula)) 
-                                                      (find_backjump_clause assignment formula (find_conflict assignment formula))
+                                                      (get_decision_level xs formula (hd (find_conflict assignment formula))) 
+                                                      (find_backjump_clause xs formula (hd (find_conflict assignment formula)))
                                                       [])
         | _ -> failwith "[Invalid argument] backjump";;
 
