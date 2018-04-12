@@ -122,6 +122,12 @@ let rec get_decision_literals_l assignment ls =
 
 let get_decision_literals assignment = Assignment (get_decision_literals_l assignment []);;
 
+let rec has_decision_literals assignment =
+    match assignment with 
+        | Assignment ([]) -> false
+        | Assignment ((c, v, true, dl) :: xs) -> true
+        | Assignment ((c, v, false, dl) :: xs) -> has_decision_literals (Assignment (xs));;
+
 (**************)
 (* Basic DPLL *)
 (**************)
@@ -262,6 +268,30 @@ let backjump assignment formula =
                                                       (find_backjump_clause xs formula (hd (find_conflict assignment formula)))
                                                       [])
         | _ -> failwith "[Invalid argument] backjump";;
+
+(* The actual DPLL procedure *)
+let rec dpll_rec assignment formula dl = 
+    match (model_found assignment formula) with
+        | true -> true
+        | false -> (
+                    match (conflict_exists assignment formula) with
+                        | true -> ( 
+                                   match (has_decision_literals assignment) with 
+                                    | false -> false
+                                    | true -> let xs = (backjump assignment formula) in dpll_rec xs formula (get_current_decision_level xs)
+                                  )
+                        | false -> (
+                                    let xs = (unit_propagation assignment formula dl) in 
+                                        match (compare assignment xs) with
+                                            | 0 -> (
+                                                    match (decision assignment formula dl) with
+                                                        | (ys, l) -> dpll_rec ys formula l
+                                                   )
+                                            | _ -> dpll_rec xs formula dl
+                                   )
+                   );;
+
+let dpll formula = dpll_rec (unit (Assignment ([])) formula) formula 0;;
 
 (* Tseitin transformation to transform a formula into CNF.*)
 
