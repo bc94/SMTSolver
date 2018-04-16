@@ -18,7 +18,11 @@ let parse_with_error lexbuf =
 
 let rec parse lexbuf = 
     match parse_with_error lexbuf with
-        | Some value -> Solver.print_formula (Solver.tseitin_transformation value);
+        | Some value -> Solver.sat (Solver.tseitin_transformation value);
+                        (*printf "Before Tseitin: \n\n";
+                        Solver.print_formula value;
+                        printf "\n\nAfter Tseitin \n\n";
+                        Solver.print_formula (Solver.tseitin_transformation value);*)
                         parse lexbuf
         | None -> ()
 
