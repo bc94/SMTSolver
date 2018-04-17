@@ -113,20 +113,20 @@ let rec unassigned_or_true_l assignment clause ls =
     match clause with
         | Atom (x) -> (
                        match (is_true assignment (Atom (x))) with
-                        | false -> [Atom (x)]
-                        | true -> []
+                        | true -> [Atom (x)]
+                        | false -> []
                       )
         | Not (Atom (x)) -> (
                              match (is_true assignment (Not (Atom (x)))) with
-                                | false -> [Not (Atom (x))]
-                                | true -> []
+                                | true -> [Not (Atom (x))]
+                                | false -> []
                             )
         | Disjunction ([]) -> ls
         | Disjunction (x :: xs) -> (
                                    match (is_true assignment x) with
-                                    | false -> unassigned_or_true_l assignment (Disjunction (xs)) (ls @ [x])
-                                    | true -> unassigned_or_true_l assignment (Disjunction (xs)) ls
-                                    | _ -> failwith "[Invalid argument] unassigned_or_truel"
+                                    | true -> unassigned_or_true_l assignment (Disjunction (xs)) (ls @ [x])
+                                    | false -> unassigned_or_true_l assignment (Disjunction (xs)) ls
+                                    | _ -> failwith "[Invalid argument] unassigned_or_true_l"
                                   )
         | _ -> failwith "[Invalid argument] unassigned_or_true_l";;
 
@@ -212,28 +212,28 @@ let rec unit_propagation assignment formula dl =
                                                                             | [Not (Atom (z))] -> unit_propagation (Assignment (ys @ [(z, false, false, dl)])) (Formula (Conjunction (xs))) dl
                                                                             | _ -> failwith "[Invalid argument] unit_propagation"
                                                                         )
-                                                                | _ -> failwith "[Invalid argument] unit_propagation"
                                                               )
         | _ -> failwith "[Invaid argument] unit_propagation";;
 
+let rec decide assignment clause dl =
+    match (clause, assignment) with
+        | (Disjunction (x :: xs), Assignment ys) -> (
+                                                     match (is_assigned assignment x, x) with
+                                                        | (true, _)-> decide assignment (Disjunction (xs)) dl
+                                                        | (false, Atom (y)) -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1))
+                                                        | (false, Not (Atom (y))) -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1))
+                                                        | (false, _) -> failwith "[Invalid argument] decide: formula not in CNF"
+                                                    )
+        | _ -> failwith "[Invalid argument] decide";;
+
 let rec decision assignment formula dl = 
-    match (formula, assignment) with
-        | (Formula (Conjunction ([])), Assignment ys) -> (Assignment ys, dl)
-        | (Formula (Conjunction (x :: xs)), Assignment ys) -> (
-                                                               match (is_clause_satisfied assignment x, x) with
-                                                                | (true, _) -> decision (Assignment ys) (Formula (Conjunction (xs))) dl
-                                                                | (false, Atom (y)) -> (
-                                                                                        match (is_assigned assignment x) with
-                                                                                            | true -> decision (Assignment ys) (Formula (Conjunction (xs))) dl
-                                                                                            | false -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1))
-                                                                                       )
-                                                                | (false, Not (Atom (y))) -> (
-                                                                                              match (is_assigned assignment x) with
-                                                                                                | true -> decision (Assignment ys) (Formula (Conjunction (xs))) dl
-                                                                                                | false -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1))
-                                                                                             )
-                                                                | _ -> failwith "[Invalid argument] decision"
-                                                              )
+    match formula with
+        | Formula (Conjunction ([])) -> (assignment, dl)
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match (is_clause_satisfied assignment x) with
+                                                | true -> decision assignment (Formula (Conjunction (xs))) dl
+                                                | false -> decide assignment x dl
+                                             )
         | _ -> failwith "[Invalid argument] decision";;
 
 
