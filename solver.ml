@@ -47,6 +47,13 @@ let print_formula f =
         | Formula (x) -> printf "Formula (%s)\n" (print_element x)
         | _ -> failwith "[Invalid formula]"
 
+let rec print_assignment_rec assignment =
+    match assignment with 
+        | Assignment ([]) -> ""
+        | Assignment ((y, b, d, dl) :: xs) -> "(" ^ (print_constraint_n y) ^ ", " ^ (string_of_bool b) ^ ", " ^ (string_of_bool d) ^ ", " ^ (string_of_int dl) ^ "); " ^ (print_assignment_rec (Assignment (xs)));;
+
+let print_assignment assignment = printf "Assignment (%s)\n" (print_assignment_rec assignment);;
+
 (* Utilities for DPLL *)
 
 let rec is_assigned (assignment : assignment) (literal : element) =
@@ -76,15 +83,15 @@ let rec is_true (assignment : assignment) (literal : element) =
                                     | ((y, true, d, dl), Atom (z)) -> ( 
                                                                        match (compare y z) with 
                                                                         | 0 -> true
-                                                                        | _ -> is_assigned (Assignment xs) literal
+                                                                        | _ -> is_true (Assignment xs) literal
                                                                       )
-                                    | ((y, true, d, dl), Not (Atom (z))) -> is_assigned (Assignment xs) literal
+                                    | ((y, true, d, dl), Not (Atom (z))) -> is_true (Assignment xs) literal
                                     | ((y, false, d, dl), Not (Atom (z))) -> (
                                                                               match (compare y z) with 
                                                                                 | 0 -> true
-                                                                                | _ -> is_assigned (Assignment xs) literal
+                                                                                | _ -> is_true (Assignment xs) literal
                                                                              )   
-                                    | ((y, false, d, dl), Atom(z)) -> is_assigned (Assignment xs) literal
+                                    | ((y, false, d, dl), Atom(z)) -> is_true (Assignment xs) literal
                                     | _ -> failwith "[Invalid argument] is_true: second argument not a literal"
                                   )
         | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;        
@@ -109,6 +116,8 @@ let rec is_clause_satisfied assignment clause =
                             )
         | _ -> failwith "[Invalid argument] second argument is not a Disjunction of element list";;
 
+(* Checking unassigned for single literal cases is not necessary since unit is always *)
+(* applied before ever calling this function, assigning values to all unit clauses  *)
 let rec unassigned_or_true_l assignment clause ls =
     match clause with
         | Atom (x) -> (
@@ -123,9 +132,13 @@ let rec unassigned_or_true_l assignment clause ls =
                             )
         | Disjunction ([]) -> ls
         | Disjunction (x :: xs) -> (
-                                   match (is_true assignment x) with
+                                    match (is_true assignment x) with
                                     | true -> unassigned_or_true_l assignment (Disjunction (xs)) (ls @ [x])
-                                    | false -> unassigned_or_true_l assignment (Disjunction (xs)) ls
+                                    | false -> (
+                                                match (is_assigned assignment x) with 
+                                                    | true -> unassigned_or_true_l assignment (Disjunction (xs)) ls
+                                                    | false -> unassigned_or_true_l assignment (Disjunction (xs)) (ls @ [x])
+                                               )
                                     | _ -> failwith "[Invalid argument] unassigned_or_true_l"
                                   )
         | _ -> failwith "[Invalid argument] unassigned_or_true_l";;
@@ -141,6 +154,16 @@ let unit_propagation_applicable assignment clause =
                     | (_, _) -> []
                 )
         | _ -> failwith "[Invalid argument] unit_propagation_applicable";;
+
+let rec unit_propagation_applicable_f assignment formula =
+    match formula with
+        | Formula (Conjunction ([])) -> false
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match (unit_propagation_applicable assignment x) with 
+                                                | [] -> unit_propagation_applicable_f assignment (Formula (Conjunction (xs)))
+                                                | _ -> true
+                                             )
+        | _ -> failwith "[Invalid argument] unit_propagation_applicable_f";;
 
 let rec model_found assignment formula = 
     match formula with
@@ -158,7 +181,7 @@ let rec find_conflict assignment formula =
         | Formula (Conjunction (x :: xs)) -> (
                                               match (unassigned_or_true assignment x) with 
                                                 | [] -> [x]
-                                                | x :: xs -> find_conflict assignment (Formula (Conjunction (xs)))   
+                                                | y :: ys -> find_conflict assignment (Formula (Conjunction (xs)))   
                                              )
         (* Empty list in middle of conjunction possible? if so, another case is needed *)
         | _ -> failwith "[Invalid argument] find_conflict";;
@@ -380,11 +403,11 @@ let rec transform_elem (e : element) (n_aux : int) (n_last : int) : (element lis
                                             | (ys, n1) -> (
                                                         match (transform_elem (hd (rev xs)) (n_last + 2) (n1)) with 
                                                             | (zs, n2) -> ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1))])] @ 
-                                                                        [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 2))])] @ 
-                                                                        [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1))); Not (Atom (AuxVar (n_last + 2)))])] @ 
-                                                                        ys @
-                                                                        zs,
-                                                                        n2)
+                                                                           [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 2))])] @ 
+                                                                           [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1))); Not (Atom (AuxVar (n_last + 2)))])] @ 
+                                                                           ys @
+                                                                           zs,
+                                                                           n2)
                                                         )
                                         )
                                 | 1 -> (transform_elem (hd xs) n_aux n_last)
@@ -393,11 +416,11 @@ let rec transform_elem (e : element) (n_aux : int) (n_last : int) : (element lis
                                             | (ys, n1) -> (
                                                         match (transform_elem (hd (rev xs)) (n_last + 2) (n1)) with 
                                                             | (zs, n2) -> ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1))])] @ 
-                                                                        [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 2))])] @ 
-                                                                        [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1))); Not (Atom (AuxVar (n_last + 2)))])] @ 
-                                                                        ys @
-                                                                        zs,
-                                                                        n2)
+                                                                           [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 2))])] @ 
+                                                                           [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1))); Not (Atom (AuxVar (n_last + 2)))])] @ 
+                                                                           ys @
+                                                                           zs,
+                                                                           n2)
                                                         )
                                        )
                               )
@@ -409,11 +432,11 @@ let rec transform_elem (e : element) (n_aux : int) (n_last : int) : (element lis
                                             | (ys, n1) -> (
                                                            match (transform_elem (hd (rev xs)) (n_last + 2) (n1)) with 
                                                             | (zs, n2) -> ([Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1)))])] @ 
-                                                                        [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 2)))])] @ 
-                                                                        [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1)); Atom (AuxVar (n_last + 2))])] @ 
-                                                                        ys @
-                                                                        zs,
-                                                                        n2)
+                                                                           [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 2)))])] @ 
+                                                                           [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1)); Atom (AuxVar (n_last + 2))])] @ 
+                                                                           ys @
+                                                                           zs,
+                                                                           n2)
                                                           )
                                        )
                                 | 1 -> (transform_elem (hd xs) n_aux n_last)
@@ -422,11 +445,11 @@ let rec transform_elem (e : element) (n_aux : int) (n_last : int) : (element lis
                                             | (ys, n1) -> (
                                                         match (transform_elem (hd (rev xs)) (n_last + 2) (n1)) with 
                                                             | (zs, n2) -> ([Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1)))])] @ 
-                                                                        [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 2)))])] @ 
-                                                                        [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1)); Atom (AuxVar (n_last + 2))])] @ 
-                                                                        ys @
-                                                                        zs,
-                                                                        n2)
+                                                                           [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 2)))])] @ 
+                                                                           [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1)); Atom (AuxVar (n_last + 2))])] @ 
+                                                                           ys @
+                                                                           zs,
+                                                                           n2)
                                                         )
                                        )
                               )
