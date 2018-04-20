@@ -319,20 +319,23 @@ let rec find_backjump_clause_l (assignment : (constraint_n * bool * bool * int) 
         | false -> find_backjump_clause_l (tl assignment) formula clause (ls @ [(hd assignment)])
         | _ -> failwith "[Invalid argument] find_backjump_clause";;
 
-let find_backjump_clause (assignment : (constraint_n * bool * bool * int) list) formula clause = let xs = Disjunction (transform_to_neg_clause (get_decision_literals (Assignment (find_backjump_clause_l (find_minimal_i assignment formula clause) formula clause [])))) in
-                                                     printf "CLAUSE: %s\n" (print_element xs); xs;;
+let find_backjump_clause (assignment : (constraint_n * bool * bool * int) list) formula clause = Disjunction (transform_to_neg_clause (get_decision_literals (Assignment (find_backjump_clause_l (find_minimal_i assignment formula clause) formula clause []))));;
         
 (* Get target decision level for backjumping. *)
 (* Relies on increasing order of decision levels in the assignment *)
 let get_decision_level (assignment : (constraint_n * bool * bool * int) list) formula clause = 
     match (get_decision_literals (Assignment (find_backjump_clause_l assignment formula clause []))) with
     | Assignment ([]) -> failwith "[Invalid argument] get_decision_level: assignment empty"
-    | Assignment ([x]) -> failwith "[Invalid argument] get_decision_level: assignment contains just one literal"
-    | Assignment (xs) -> printf "\n\n"; print_assignment (Assignment xs); printf "\n\n";(
-                        match (hd (tl (rev xs))) with
+    | Assignment ([x]) -> (
+                           match x with 
+                            | (c, v, d, dl) -> (dl - 1)
+                            | _ -> failwith "[Invalid argument] get_decison_level"
+                          )
+    | Assignment (xs) -> (
+                          match (hd (tl (rev xs))) with
                             | (c, v, d, dl) -> dl
                             | _ -> failwith "[Invalid argument] get_decison_level"
-                        )
+                         )
     | _ -> failwith "[Invalid argument] get_decision_level";;
 
 let get_current_decision_level assignment = 
@@ -348,7 +351,7 @@ let get_current_decision_level assignment =
 let rec backjump_rec assignment dl clause ls = 
     match assignment with
         | Assignment ([]) -> failwith "[Invalid argument] backjump_rec"
-        | Assignment ((c, v, d, l) :: xs) -> printf "CLAUSE: %s | " (string_of_int l); printf "TARGET: %s\n" (string_of_int dl);(
+        | Assignment ((c, v, d, l) :: xs) -> (
                                               match (compare l dl) with
                                                 | 1 -> ( 
                                                         match clause with
@@ -367,7 +370,7 @@ let rec backjump_rec assignment dl clause ls =
         | _ -> failwith "[Invalid argument] backjump_rec";;
 
 let backjump assignment formula = 
-    printf "BACKJUMP\n"; match assignment with 
+    match assignment with 
         | Assignment (xs) -> let ys = (find_conflict assignment formula) in
                                 Assignment (backjump_rec assignment
                                             (get_decision_level xs formula (hd ys)) 
