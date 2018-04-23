@@ -177,11 +177,11 @@ let rec unit_propagation_applicable_f assignment formula =
 
 let rec model_found assignment formula = 
     match formula with
-        | Formula (Conjunction ([])) -> true 
+        | Formula (Conjunction ([])) -> (true, formula) 
         | Formula (Conjunction (x :: xs)) -> (
                                               match (is_clause_satisfied assignment x) with 
                                                 | true -> model_found assignment (Formula (Conjunction (xs)))
-                                                | false -> false
+                                                | false -> (false, formula)
                                              )
         | _ -> failwith "[Invalid argument] model_found";;
 
@@ -379,28 +379,39 @@ let backjump assignment formula =
         | _ -> failwith "[Invalid argument] backjump";;
 
 (* The actual DPLL procedure *)
-let rec dpll_rec assignment formula dl = 
-    match (model_found assignment formula) with
-        | true -> true
-        | false -> (
-                    match (conflict_exists assignment formula) with
-                        | true -> ( 
-                                   match (has_decision_literals assignment) with 
-                                    | false -> false
-                                    | true -> let xs = (backjump assignment formula) in dpll_rec xs formula (get_current_decision_level xs)
-                                  )
-                        | false -> (
-                                    let xs = (unit_propagation assignment formula dl) in 
-                                        match (compare assignment xs) with
-                                            | 0 -> (
-                                                    match (decision assignment formula dl) with
-                                                        | (ys, l) -> dpll_rec ys formula l
-                                                   )
-                                            | _ -> dpll_rec xs formula dl
-                                   )
-                   );;
 
-let dpll formula = dpll_rec (unit (Assignment ([])) formula) formula 0;;
+(* 'formula' is the actual initial formula and never changes. *)
+(* 'formula_opt' is an optimized alternative formula where every *)
+(* satisfied clause has been removed to make most of the function *)
+(* calls in the procedure more efficient *)
+let rec dpll_rec assignment formula formula_opt dl = 
+    match (model_found assignment formula_opt) with
+        | (true, _) -> true
+        | (false, formula_new) -> (
+                                   match (conflict_exists assignment formula_new) with
+                                    | true -> ( 
+                                               match (has_decision_literals assignment) with 
+                                                | false -> false
+                                                | true -> let xs = (backjump assignment formula) in dpll_rec xs formula formula (get_current_decision_level xs)
+                                              )
+                                    | false -> (
+                                                (*match (unit_propagation_applicable_f assignment formula_new) with 
+                                                    | true -> let xs = (unit_propagation assignment formula_new dl) in dpll_rec xs formula formula_new dl
+                                                    | false -> (
+                                                                match (decision assignment formula_new dl) with
+                                                                    | (ys, l) -> dpll_rec ys formula formula_new l
+                                                    )*)
+                                                let xs = (unit_propagation assignment formula_new dl) in 
+                                                 match (compare assignment xs) with
+                                                    | 0 -> (
+                                                            match (decision assignment formula_new dl) with
+                                                                | (ys, l) -> dpll_rec ys formula formula_new l
+                                                           )
+                                                    | _ -> dpll_rec xs formula formula_new dl
+                                               )
+                                  );;
+
+let dpll formula = dpll_rec (unit (Assignment ([])) formula) formula formula 0;;
 
 let sat formula = 
     match (dpll formula) with
