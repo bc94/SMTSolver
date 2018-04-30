@@ -172,20 +172,26 @@ let rec unit assignment formula =
                                                               )
         | _ -> failwith "[Invalid argument] second argument is not a formula in CNF"
 
-let rec unit_propagation assignment formula dl =
+let rec unit_propagation assignment formula formula_opt dl =
     match (formula, assignment) with 
-        | (Formula (Conjunction ([])), Assignment ys) -> Assignment ys
-        | (Formula (Conjunction (x :: xs)), Assignment ys) -> ( 
-                                                               match (unit_propagation_applicable assignment x) with
-                                                                | [] -> unit_propagation (Assignment (ys)) (Formula (Conjunction (xs))) dl
-                                                                | zs -> (
-                                                                         match zs with
-                                                                            | [Atom (z)] -> unit_propagation (Assignment (ys @ [(z, true, false, dl)])) (Formula (Conjunction (xs))) dl
-                                                                            | [Not (Atom (z))] -> unit_propagation (Assignment (ys @ [(z, false, false, dl)])) (Formula (Conjunction (xs))) dl
-                                                                            | _ -> failwith "[Invalid argument] unit_propagation"
-                                                                        )
-                                                              )
+        | (Formula (Conjunction ([])), Assignment ys) -> (assignment, Formula (Conjunction (formula_opt)))
+        | (Formula (Conjunction ((Disjunction (x)) :: xs)), Assignment ys) -> ( 
+                                                                                match (length x) with
+                                                                                    | 1 -> (
+                                                                                            match x with
+                                                                                                | [Atom (y)] -> unit_propagation (Assignment (ys @ [(y, true, false, dl)])) (Formula (Conjunction (xs))) formula_opt dl
+                                                                                                | [Not (Atom (y))] -> unit_propagation (Assignment (ys @ [(y, false, false, dl)])) (Formula (Conjunction (xs))) formula_opt dl
+                                                                                                | _ -> failwith "[Invalid argument] unit_propagation"
+                                                                                            )
+                                                                                    | _ -> unit_propagation assignment (Formula (Conjunction (xs))) (formula_opt @ [Disjunction (x)]) dl
+                                                                              )
         | _ -> failwith "[Invaid argument] unit_propagation";;
+
+let rec exhaustive_unit_propagation assignment formula dl = 
+    let (xs, f_opt) = (unit_propagation assignment formula [] dl) in 
+        match (compare xs assignment) with 
+            | 0 -> (xs, f_opt)
+            | _ -> exhaustive_unit_propagation xs f_opt dl;;
 
 let rec decide assignment clause dl =
     match (clause, assignment) with
@@ -201,11 +207,7 @@ let rec decide assignment clause dl =
 let rec decision assignment formula dl = 
     match formula with
         | Formula (Conjunction ([])) -> (assignment, dl)
-        | Formula (Conjunction (x :: xs)) -> (
-                                              match (is_clause_satisfied assignment x) with
-                                                | true -> decision assignment (Formula (Conjunction (xs))) dl
-                                                | false -> decide assignment x dl
-                                             )
+        | Formula (Conjunction (x :: xs)) -> decide assignment x dl
         | _ -> failwith "[Invalid argument] decision";;
 
 
@@ -335,18 +337,18 @@ let rec dpll_rec assignment formula formula_opt dl =
                                               )
                                     | false -> (
                                                 (*match (unit_propagation_applicable_f assignment formula_new) with 
-                                                    | true -> let xs = (unit_propagation assignment formula_new dl) in dpll_rec xs formula formula_new dl
+                                                    | true -> let xs = (exhaustive_unit_propagation assignment formula_new dl) in dpll_rec xs formula formula_new dl
                                                     | false -> (
                                                                 match (decision assignment formula_new dl) with
                                                                     | (ys, l) -> dpll_rec ys formula formula_new l
-                                                    )*)
-                                                let xs = (unit_propagation assignment formula_new dl) in 
+                                                               )*)
+                                                let (xs, f_opt) = (exhaustive_unit_propagation assignment formula_new dl) in 
                                                  match (compare assignment xs) with
                                                     | 0 -> (
                                                             match (decision assignment formula_new dl) with
                                                                 | (ys, l) -> dpll_rec ys formula formula_new l
                                                            )
-                                                    | _ -> dpll_rec xs formula formula_new dl
+                                                    | _ -> dpll_rec xs formula f_opt dl
                                                )
                                   );;
 
