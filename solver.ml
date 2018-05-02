@@ -298,8 +298,8 @@ let rec backjump_rec assignment dl clause ls =
                                                         match clause with
                                                             | Disjunction (ys) -> (
                                                                                    match (hd (rev ys)) with
-                                                                                    | Atom (y) -> ls @ [(y, true, false, l)]
-                                                                                    | Not (Atom (y)) -> ls @ [(y, false, false, l)]
+                                                                                    | Atom (y) -> ls @ [(y, true, false, dl)]
+                                                                                    | Not (Atom (y)) -> ls @ [(y, false, false, dl)]
                                                                                     | _ -> failwith "[Invalid argument] backjump_rec"
                                                                                   )
                                                             | _ -> failwith "[Invalid argument] backjump_rec"

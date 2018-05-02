@@ -1,5 +1,6 @@
 open String
 open Types
+open Core.Std
 
 (* Functions for printing a formula *)
 
