@@ -268,19 +268,25 @@ let find_backjump_clause (assignment : (constraint_n * bool * bool * int) list) 
         
 (* Get target decision level for backjumping. *)
 (* Relies on increasing order of decision levels in the assignment *)
-let get_decision_level (assignment : (constraint_n * bool * bool * int) list) formula clause = 
-    match (get_decision_literals (Assignment (find_backjump_clause_l assignment formula clause []))) with
-    | Assignment ([]) -> failwith "[Invalid argument] get_decision_level: assignment empty"
-    | Assignment ([x]) -> (
-                           match x with 
-                            | (c, v, d, dl) -> (dl - 1)
-                            | _ -> failwith "[Invalid argument] get_decison_level"
-                          )
-    | Assignment (xs) -> (
-                          match (hd (tl (rev xs))) with
-                            | (c, v, d, dl) -> dl
-                            | _ -> failwith "[Invalid argument] get_decison_level"
-                         )
+let rec get_decision_level (assignment : (constraint_n * bool * bool * int) list) literal = 
+    match assignment with
+    | [] -> failwith "[Invalid argument] get_decision_level: literal not in assignment list"
+    | x :: xs -> (
+                  match (x) with
+                    | (c, v, d, dl) -> (
+                                        match literal with 
+                                            | Atom (y) -> (
+                                                           match (compare c y) with 
+                                                            | 0 -> dl
+                                                            | _ -> get_decision_level xs literal
+                                                          )
+                                            | Not (Atom (y)) -> (
+                                                                 match (compare c y) with 
+                                                                    | 0 -> dl
+                                                                    | _ -> get_decision_level xs literal
+                                                                )
+                                       )
+                 )
     | _ -> failwith "[Invalid argument] get_decision_level";;
 
 let get_current_decision_level assignment = 
@@ -317,10 +323,18 @@ let rec backjump_rec assignment dl clause ls =
 let backjump assignment formula = 
     match assignment with 
         | Assignment (xs) -> let ys = (find_conflict assignment formula) in
-                                Assignment (backjump_rec assignment
-                                            (get_decision_level xs formula (hd ys)) 
-                                            (find_backjump_clause xs formula (hd ys))
-                                            [])
+                                let (Disjunction (zs)) = (find_backjump_clause xs formula (hd ys)) in
+                                    (
+                                     match Disjunction (tl (rev zs)) with 
+                                        | Disjunction ([]) -> Assignment (backjump_rec assignment
+                                                                            0
+                                                                            (Disjunction (zs))
+                                                                            [])
+                                        | _ ->  Assignment (backjump_rec assignment
+                                                            (get_decision_level xs (hd (tl (rev zs)))) 
+                                                            (Disjunction (zs))
+                                                            [])
+                                    )
         | _ -> failwith "[Invalid argument] backjump";;
 
 (* The actual DPLL procedure *)
