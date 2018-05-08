@@ -14,6 +14,7 @@ module Simplex : sig
   val simplex : constrainta list -> (nat, rat) mapping option
   val lp_monom : rat -> nat -> linear_poly
   val rat_of_int_pair : Big_int.big_int -> Big_int.big_int -> rat
+  val plus_linear_poly : linear_poly -> linear_poly -> linear_poly
 end = struct
 
 type int = Int_of_integer of Big_int.big_int;;
