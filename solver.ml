@@ -2,6 +2,7 @@ open String
 open Types
 open List
 open Core.Std
+open Simplex
 
 (* Utilities for DPLL *)
 
@@ -337,6 +338,22 @@ let backjump assignment formula =
                                     )
         | _ -> failwith "[Invalid argument] backjump";;
 
+let rec backtrack_rec assignment dl ls =
+    match assignment with
+        | Assignment ([]) -> failwith "[Invalid argument] backtrack: assignment list does not contain literals of current decision level"
+        | Assignment ((c, v, d, l) :: xs) -> (
+                                              match (compare dl l) with
+                                                | 0 -> (
+                                                        match (v, d) with
+                                                            | (true, true) -> ls @ [(c, false, false, (l - 1))]
+                                                            | (false, true) -> ls @ [(c, true, false, (l - 1))]
+                                                            | (_, false) -> failwith "[Invalid argument] backtrack: assignment list does not contain a decision literal of current decision level"
+                                                       )
+                                                | _ -> backtrack_rec (Assignment (xs)) dl (ls @ [(c, v, d, dl)])
+                                             );;
+
+let backtrack assignment dl = Assignment (backtrack_rec assignment dl []);;
+
 (* The actual DPLL procedure *)
 
 (* 'formula' is the actual initial formula and never changes. *)
@@ -350,8 +367,12 @@ let rec dpll_rec assignment formula formula_opt dl =
                                           let (xs, f_opt) = (exhaustive_unit_propagation assignment formula_new dl) in 
                                                  match (compare assignment xs) with
                                                     | 0 -> (
-                                                            match (decision assignment formula_new dl) with
-                                                                | (ys, l) -> dpll_rec ys formula formula_new l
+                                                            match (Simplex.simplex (Util.to_simplex_format_init assignment)) with 
+                                                                | Some (x) -> (
+                                                                               match (decision assignment formula_new dl) with
+                                                                                | (ys, l) -> dpll_rec ys formula formula_new l
+                                                                              )
+                                                                | None -> dpll_rec (backtrack xs dl) formula formula (dl - 1)
                                                            )
                                                     | _ -> dpll_rec xs formula f_opt dl
                                          )
