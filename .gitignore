@@ -1,3 +1,4 @@
 _build/
 testdata/
 run_solver.native
+IA_Checker.ml

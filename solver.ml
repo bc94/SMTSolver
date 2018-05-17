@@ -302,18 +302,18 @@ let get_current_decision_level assignment =
 (* Backjump without learning as of now *)
 let rec backjump_rec assignment dl clause ls = 
     match assignment with
-        | Assignment ([]) -> failwith "[Invalid argument] backjump_rec"
-        | Assignment ((c, v, d, l) :: xs) -> (
+        | Assignment ([]) -> failwith "[Invalid argument] backjump_rec: empty assignment"
+        | Assignment ((c, v, d, l) :: xs) -> printf "L: %s, DL: %s\n" (string_of_int l) (string_of_int dl);(
                                               match (compare l dl) with
-                                                | 1 -> ( 
+                                                | 1 -> printf "test\n";( 
                                                         match clause with
                                                             | Disjunction (ys) -> (
                                                                                    match (hd (rev ys)) with
                                                                                     | Atom (y) -> ls @ [(y, true, false, dl)]
                                                                                     | Not (Atom (y)) -> ls @ [(y, false, false, dl)]
-                                                                                    | _ -> failwith "[Invalid argument] backjump_rec"
+                                                                                    | _ -> failwith "[Invalid argument] backjump_rec: last element of disjunction not a literal"
                                                                                   )
-                                                            | _ -> failwith "[Invalid argument] backjump_rec"
+                                                            | _ -> failwith "[Invalid argument] backjump_rec: clause not a disjunction"
                                                        )
                                                 | 0 -> backjump_rec (Assignment (xs)) dl clause (ls @ [(c, v, d, l)])
                                                 | -1 -> backjump_rec (Assignment (xs)) dl clause (ls @ [(c, v, d, l)])
@@ -379,7 +379,7 @@ let rec dpll_rec assignment formula formula_opt dl =
         | (false, formula_new, true) -> ( 
                                          match (has_decision_literals assignment) with 
                                             | false -> false
-                                            | true -> let xs = (backjump assignment formula) in dpll_rec xs formula formula (get_current_decision_level xs)
+                                            | true -> printf "\n\nBACKJUMP\n"; let xs = (backjump assignment formula) in dpll_rec xs formula formula (get_current_decision_level xs)
                                         );;
                                    (*match (conflict_exists assignment formula_new) with
                                     | true -> ( 
