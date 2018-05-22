@@ -161,6 +161,11 @@ let rec has_decision_literals assignment =
         | Assignment ((c, v, true, dl) :: xs) -> true
         | Assignment ((c, v, false, dl) :: xs) -> has_decision_literals (Assignment (xs));;
 
+let is_proper_constraint cons = 
+    match cons with 
+    | Constraint (x) -> true
+    | AuxVar (x) -> false;;
+
 (**************)
 (* Basic DPLL *)
 (**************)
@@ -203,18 +208,30 @@ let rec decide assignment clause dl =
         | (Disjunction (x :: xs), Assignment ys) -> (
                                                      match (is_assigned assignment x, x) with
                                                         | (true, _)-> decide assignment (Disjunction (xs)) dl
-                                                        | (false, Atom (y)) -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1))
-                                                        | (false, Not (Atom (y))) -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1))
+                                                        | (false, Atom (y)) -> (
+                                                                                match is_proper_constraint y with
+                                                                                 | true -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1), true)
+                                                                                 | false -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1), false)
+                                                                               )
+                                                        | (false, Not (Atom (y))) -> (
+                                                                                      match is_proper_constraint y with 
+                                                                                        | true -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1), true)
+                                                                                        | false -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1), false)
+                                                                                     )
                                                         | (false, _) -> failwith "[Invalid argument] decide: formula not in CNF"
                                                     )
         | _ -> failwith "[Invalid argument] decide";;
 
 let rec decision assignment formula dl = 
     match formula with
-        | Formula (Conjunction ([])) -> (assignment, dl)
+        | Formula (Conjunction ([])) -> (assignment, dl, false)
         | Formula (Conjunction (x :: xs)) -> decide assignment x dl
         | _ -> failwith "[Invalid argument] decision";;
 
+let learn formula clause =
+    match formula with
+        | Formula (Conjunction (xs)) -> Formula (Conjunction (xs @ [clause]))
+        | _ -> failwith "[Invalid argument] learn: formula not in CNF";;
 
 (*************************************************************************)
 (* Auxiliary functions for backjump (some use unit and unit_propagation) *)
@@ -303,9 +320,9 @@ let get_current_decision_level assignment =
 let rec backjump_rec assignment dl clause ls = 
     match assignment with
         | Assignment ([]) -> failwith "[Invalid argument] backjump_rec: empty assignment"
-        | Assignment ((c, v, d, l) :: xs) -> printf "L: %s, DL: %s\n" (string_of_int l) (string_of_int dl);(
+        | Assignment ((c, v, d, l) :: xs) -> (
                                               match (compare l dl) with
-                                                | 1 -> printf "test\n";( 
+                                                | 1 -> ( 
                                                         match clause with
                                                             | Disjunction (ys) -> (
                                                                                    match (hd (rev ys)) with
@@ -349,7 +366,7 @@ let rec backtrack_rec assignment dl ls =
                                                             | (false, true) -> ls @ [(c, true, false, (l - 1))]
                                                             | (_, false) -> failwith "[Invalid argument] backtrack: assignment list does not contain a decision literal of current decision level"
                                                        )
-                                                | _ -> backtrack_rec (Assignment (xs)) dl (ls @ [(c, v, d, dl)])
+                                                | _ -> backtrack_rec (Assignment (xs)) dl (ls @ [(c, v, d, l)])
                                              );;
 
 let backtrack assignment dl = Assignment (backtrack_rec assignment dl []);;
@@ -362,25 +379,28 @@ let backtrack assignment dl = Assignment (backtrack_rec assignment dl []);;
 (* calls in the procedure more efficient *)
 let rec dpll_rec assignment formula formula_opt dl = 
     match (model_found assignment formula_opt) with
-        | (true, _, _) -> true
+        | (true, _, _) -> (
+                           match (Util.to_simplex_format_init assignment) with 
+                            | (sf_assignment, cs) -> ( 
+                                                      match Simplex.simplex sf_assignment with
+                                                        | Some (x) -> true
+                                                        | None -> printf "\n\nRESTART\n\n"; restart (learn formula (Disjunction (transform_to_neg_clause cs)))
+                                                     )
+                         )
         | (false, formula_new, false) -> (
                                           let (xs, f_opt) = (exhaustive_unit_propagation assignment formula_new dl) in 
                                                  match (compare assignment xs) with
                                                     | 0 -> (
-                                                            match (Simplex.simplex (Util.to_simplex_format_init assignment)) with 
-                                                                | Some (x) -> (
-                                                                               match (decision assignment formula_new dl) with
-                                                                                | (ys, l) -> dpll_rec ys formula formula_new l
-                                                                              )
-                                                                | None -> dpll_rec (backtrack xs dl) formula formula (dl - 1)
+                                                            match (decision assignment formula_new dl) with
+                                                                | (ys, l, _) -> dpll_rec ys formula formula_new l
                                                            )
                                                     | _ -> dpll_rec xs formula f_opt dl
                                          )
         | (false, formula_new, true) -> ( 
                                          match (has_decision_literals assignment) with 
                                             | false -> false
-                                            | true -> printf "\n\nBACKJUMP\n"; let xs = (backjump assignment formula) in dpll_rec xs formula formula (get_current_decision_level xs)
-                                        );;
+                                            | true -> let xs = (backjump assignment formula) in dpll_rec xs formula formula (get_current_decision_level xs)
+                                        )
                                    (*match (conflict_exists assignment formula_new) with
                                     | true -> ( 
                                                match (has_decision_literals assignment) with 
@@ -404,7 +424,9 @@ let rec dpll_rec assignment formula formula_opt dl =
                                                )
                                   );;*)
 
-let dpll formula = dpll_rec (unit (Assignment ([])) formula) formula formula 0;;
+and dpll formula = dpll_rec (unit (Assignment ([])) formula) formula formula 0
+
+and restart formula = dpll formula;;
 
 let sat formula = 
     match (dpll formula) with
