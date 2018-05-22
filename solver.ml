@@ -124,7 +124,8 @@ let rec model_found assignment formula =
                                                 | false -> (
                                                             match (unassigned_or_true assignment x) with
                                                                 | [] -> (false, formula, true)
-                                                                | _ -> (false, formula, false)
+                                                                | [y] -> (false, Formula (Conjunction (y :: xs)), false)
+                                                                | ys -> (false, Formula (Conjunction ((Disjunction (ys)) :: xs)), false)
                                                            )
                                              )
         | _ -> failwith "[Invalid argument] model_found";;
@@ -195,6 +196,8 @@ let rec unit_propagation assignment formula formula_opt dl =
                                                                                             )
                                                                                     | _ -> unit_propagation assignment (Formula (Conjunction (xs))) (formula_opt @ [Disjunction (x)]) dl
                                                                               )
+        | (Formula (Conjunction ((Atom (x)) :: xs)), Assignment ys) ->  unit_propagation (Assignment (ys @ [(x, true, false, dl)])) (Formula (Conjunction (xs))) formula_opt dl
+        | (Formula (Conjunction ((Not (Atom (x))) :: xs)), Assignment ys) ->  unit_propagation (Assignment (ys @ [(x, false, false, dl)])) (Formula (Conjunction (xs))) formula_opt dl
         | _ -> failwith "[Invaid argument] unit_propagation";;
 
 let rec exhaustive_unit_propagation assignment formula dl = 
@@ -203,22 +206,25 @@ let rec exhaustive_unit_propagation assignment formula dl =
             | 0 -> (xs, f_opt)
             | _ -> exhaustive_unit_propagation xs f_opt dl;;
 
+(* Optimized to not include any 'is_assigned' call. This is only possible
+   because model_found is always called first and removes false literals 
+   from the first unsatisfied clause, leaving only unassigned literals
+   in that clause *)
 let rec decide assignment clause dl =
     match (clause, assignment) with
         | (Disjunction (x :: xs), Assignment ys) -> (
-                                                     match (is_assigned assignment x, x) with
-                                                        | (true, _)-> decide assignment (Disjunction (xs)) dl
-                                                        | (false, Atom (y)) -> (
-                                                                                match is_proper_constraint y with
-                                                                                 | true -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1), true)
-                                                                                 | false -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1), false)
-                                                                               )
-                                                        | (false, Not (Atom (y))) -> (
-                                                                                      match is_proper_constraint y with 
-                                                                                        | true -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1), true)
-                                                                                        | false -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1), false)
-                                                                                     )
-                                                        | (false, _) -> failwith "[Invalid argument] decide: formula not in CNF"
+                                                     match x with
+                                                        | Atom (y) -> (
+                                                                       match is_proper_constraint y with
+                                                                        | true -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1), true)
+                                                                        | false -> (Assignment (ys @ [(y, true, true, dl + 1)]), (dl + 1), false)
+                                                                      )
+                                                        | Not (Atom (y)) -> (
+                                                                             match is_proper_constraint y with 
+                                                                                | true -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1), true)
+                                                                                | false -> (Assignment (ys @ [(y, false, true, dl + 1)]), (dl + 1), false)
+                                                                            )
+                                                        | _ -> failwith "[Invalid argument] decide: formula not in CNF"
                                                     )
         | _ -> failwith "[Invalid argument] decide";;
 
@@ -230,7 +236,7 @@ let rec decision assignment formula dl =
 
 let learn formula clause =
     match formula with
-        | Formula (Conjunction (xs)) -> Formula (Conjunction (xs @ [clause]))
+        | Formula (Conjunction (xs)) -> Formula (Conjunction ([clause] @ xs))
         | _ -> failwith "[Invalid argument] learn: formula not in CNF";;
 
 (*************************************************************************)
@@ -316,7 +322,7 @@ let get_current_decision_level assignment =
                              )
         | _ -> failwith "[Invalid argument] get_current_decision_level";;
 
-(* Backjump without learning as of now *)
+(* Backjump *)
 let rec backjump_rec assignment dl clause ls = 
     match assignment with
         | Assignment ([]) -> failwith "[Invalid argument] backjump_rec: empty assignment"
@@ -344,14 +350,16 @@ let backjump assignment formula =
                                 let (Disjunction (zs)) = (find_backjump_clause xs formula (hd ys)) in
                                     (
                                      match Disjunction (tl (rev zs)) with 
-                                        | Disjunction ([]) -> Assignment (backjump_rec assignment
+                                        | Disjunction ([]) -> (Assignment (backjump_rec assignment
                                                                             0
                                                                             (Disjunction (zs))
-                                                                            [])
-                                        | _ ->  Assignment (backjump_rec assignment
+                                                                            []),
+                                                               Disjunction (zs))
+                                        | _ ->  (Assignment (backjump_rec assignment
                                                             (get_decision_level xs (hd (tl (rev zs)))) 
                                                             (Disjunction (zs))
-                                                            [])
+                                                            []),
+                                                Disjunction (zs))
                                     )
         | _ -> failwith "[Invalid argument] backjump";;
 
@@ -378,7 +386,7 @@ let backtrack assignment dl = Assignment (backtrack_rec assignment dl []);;
 (* satisfied clause has been removed to make most of the function *)
 (* calls in the procedure more efficient *)
 let rec dpll_rec assignment formula formula_opt dl = 
-    match (model_found assignment formula_opt) with
+    printf "\n\n"; Printing.print_assignment assignment; printf "\n\n"; match (model_found assignment formula_opt) with
         | (true, _, _) -> (
                            match (Util.to_simplex_format_init assignment) with 
                             | (sf_assignment, cs) -> ( 
@@ -399,7 +407,7 @@ let rec dpll_rec assignment formula formula_opt dl =
         | (false, formula_new, true) -> ( 
                                          match (has_decision_literals assignment) with 
                                             | false -> false
-                                            | true -> let xs = (backjump assignment formula) in dpll_rec xs formula formula (get_current_decision_level xs)
+                                            | true -> let (xs, bj_clause) = (backjump assignment formula) in let formula_l = (learn formula bj_clause) in dpll_rec xs formula_l formula_l (get_current_decision_level xs)
                                         )
                                    (*match (conflict_exists assignment formula_new) with
                                     | true -> ( 
