@@ -115,10 +115,14 @@ let rec unit_propagation_applicable_f assignment formula =
                                              )
         | _ -> failwith "[Invalid argument] unit_propagation_applicable_f";;
 
-let rec model_found assignment formula = 
+(* First return value indicates if a model was found *)
+(* Second return value is the optimized formula *)
+(* Third argument indicates whether the encountered unsatisfied clause contains a conflict or not *)
+(*let rec model_found assignment formula = 
     match formula with
         | Formula (Conjunction ([])) -> (true, formula, false) 
         | Formula (Conjunction (x :: xs)) -> (
+                                              (* Formula optimization step: removes all satisfied clauses until first non-satisfied clause is encountered *)
                                               match (is_clause_satisfied assignment x) with 
                                                 | true -> model_found assignment (Formula (Conjunction (xs)))
                                                 | false -> (
@@ -128,7 +132,13 @@ let rec model_found assignment formula =
                                                                 | ys -> (false, Formula (Conjunction ((Disjunction (ys)) :: xs)), false)
                                                            )
                                              )
-        | _ -> failwith "[Invalid argument] model_found";;
+        | _ -> failwith "[Invalid argument] model_found";;*)
+
+let model_found formula_opt = 
+    match formula_opt with
+        | Formula (Conjunction ([])) -> true
+        | Formula (Conjunction (xs)) -> false
+        | _ -> failwith "[Invalid argument] model_found: formula not in cnf";;
 
 let rec find_conflict assignment formula =
     match formula with
@@ -183,7 +193,7 @@ let rec unit assignment formula =
                                                               )
         | _ -> failwith "[Invalid argument] second argument is not a formula in CNF"
 
-let rec unit_propagation assignment formula formula_opt dl =
+(*let rec unit_propagation assignment formula formula_opt dl =
     match (formula, assignment) with 
         | (Formula (Conjunction ([])), Assignment ys) -> (assignment, Formula (Conjunction (formula_opt)))
         | (Formula (Conjunction ((Disjunction (x)) :: xs)), Assignment ys) -> ( 
@@ -193,24 +203,123 @@ let rec unit_propagation assignment formula formula_opt dl =
                                                                                                 | [Atom (y)] -> unit_propagation (Assignment (ys @ [(y, true, false, dl)])) (Formula (Conjunction (xs))) formula_opt dl
                                                                                                 | [Not (Atom (y))] -> unit_propagation (Assignment (ys @ [(y, false, false, dl)])) (Formula (Conjunction (xs))) formula_opt dl
                                                                                                 | _ -> failwith "[Invalid argument] unit_propagation"
-                                                                                            )
+                                                                                           )
                                                                                     | _ -> unit_propagation assignment (Formula (Conjunction (xs))) (formula_opt @ [Disjunction (x)]) dl
                                                                               )
         | (Formula (Conjunction ((Atom (x)) :: xs)), Assignment ys) ->  unit_propagation (Assignment (ys @ [(x, true, false, dl)])) (Formula (Conjunction (xs))) formula_opt dl
         | (Formula (Conjunction ((Not (Atom (x))) :: xs)), Assignment ys) ->  unit_propagation (Assignment (ys @ [(x, false, false, dl)])) (Formula (Conjunction (xs))) formula_opt dl
-        | _ -> failwith "[Invaid argument] unit_propagation";;
+        | _ -> failwith "[Invaid argument] unit_propagation";; *)
 
-let rec exhaustive_unit_propagation assignment formula dl = 
+let rec contains_literal lit_list literal = 
+    match lit_list with
+        | [] -> None
+        | x :: xs -> (
+                      match (x, literal) with
+                        | (Atom (y), Atom (z)) -> (
+                                                   match (compare y z) with 
+                                                    | 0 -> Some (true)
+                                                    | _ -> contains_literal xs literal
+                                                  )
+                        | (Not (Atom (y)), Not (Atom (z))) -> (
+                                                               match (compare y z) with 
+                                                                | 0 -> Some (true)
+                                                                | _ -> contains_literal xs literal
+                                                              )
+                        | (Atom (y), Not (Atom (z))) -> (
+                                                         match (compare y z) with
+                                                            | 0 -> Some (false)
+                                                            | _ -> contains_literal xs literal
+                                                        )
+                        | (Not (Atom (y)), Atom (z)) -> (
+                                                         match (compare y z) with
+                                                            | 0 -> Some (false)
+                                                            | _ -> contains_literal xs literal
+                                                        )
+                     );;
+
+let rec remove_literal clause literal acc =
+    match clause with 
+        | Disjunction ([]) -> Disjunction (acc)
+        | Disjunction (x :: xs) -> (
+                                    match (x, literal) with
+                                        | (Atom (y), Atom (z)) -> remove_literal (Disjunction (xs)) literal (acc @ [x])
+                                        | (Not (Atom (y)), Not (Atom (z))) -> remove_literal (Disjunction (xs)) literal (acc @ [x])
+                                        | (Atom (y), Not (Atom (z))) -> (
+                                                         match (compare y z) with
+                                                            | 0 -> remove_literal (Disjunction (xs)) literal acc
+                                                            | _ -> remove_literal (Disjunction (xs)) literal (acc @ [x])
+                                                                        )
+                                        | (Not (Atom (y)), Atom (z)) -> (
+                                                         match (compare y z) with
+                                                            | 0 -> remove_literal (Disjunction (xs)) literal acc
+                                                            | _ -> remove_literal (Disjunction (xs)) literal (acc @ [x])
+                                                                        )
+                                   );;
+
+let rec propagate formula_opt literal acc conf = 
+    match formula_opt with
+        | (Formula (Conjunction ([]))) -> ((Formula (Conjunction (acc))), conf)
+        | (Formula (Conjunction ((Disjunction (x)) :: xs))) -> (
+                                                                match (contains_literal x literal) with
+                                                                    | Some (true) -> propagate (Formula (Conjunction (xs))) literal acc conf
+                                                                    | Some (false) -> (
+                                                                                       match (length x) with
+                                                                                        | 1 -> ((Formula (Conjunction (acc))), true)
+                                                                                        | _ -> propagate (Formula (Conjunction (xs))) literal (acc @ [(remove_literal (Disjunction (x)) literal [])]) conf
+                                                                                      )
+                                                                    | None -> propagate (Formula (Conjunction (xs))) literal (acc @ [Disjunction (x)]) conf
+                                                               )
+        | (Formula (Conjunction (x :: xs))) -> (
+                                                match (contains_literal [x] literal) with
+                                                    | Some (true) -> propagate (Formula (Conjunction (xs))) literal acc conf
+                                                    | Some (false) -> ((Formula (Conjunction (acc))), true)
+                                                    | None -> propagate (Formula (Conjunction (xs))) literal (acc @ [x]) conf
+                                               )
+        | _ -> failwith "[Invalid argument] propagate";;
+
+let rec unit_propagation assignment formula_it formula_opt dl = 
+    match formula_it with 
+        | (Formula (Conjunction ([]))) -> (assignment, formula_opt, false)
+        | (Formula (Conjunction ((Disjunction (x)) :: xs))) -> (
+                                                                match (length x) with
+                                                                    | 1 -> let (f_new, conf) = propagate formula_opt (hd x) [] false in
+                                                                            let Assignment (ys) = assignment in (
+                                                                                                                 match (hd x) with
+                                                                                                                    | Atom (y) -> ((Assignment (ys @ [(y, true, false, dl)])), f_new, conf)
+                                                                                                                    | Not (Atom (y)) -> ((Assignment (ys @ [(y, false, false, dl)])), f_new, conf)
+                                                                                                                )
+                                                                    | _ -> unit_propagation assignment (Formula (Conjunction (xs))) formula_opt dl
+                                                               )
+        | (Formula (Conjunction (x :: xs))) -> let (f_new, conf) = propagate formula_opt x [] false in
+                                                                            let Assignment (ys) = assignment in (
+                                                                                                                 match x with
+                                                                                                                    | Atom (y) -> ((Assignment (ys @ [(y, true, false, dl)])), f_new, conf)
+                                                                                                                    | Not (Atom (y)) -> ((Assignment (ys @ [(y, false, false, dl)])), f_new, conf)
+                                                                                                                )
+        | _ -> failwith "[Invalid argument] unit_propagation: formula not in cnf";;
+
+(*let rec exhaustive_unit_propagation assignment formula dl = 
     let (xs, f_opt) = (unit_propagation assignment formula [] dl) in 
         match (compare xs assignment) with 
             | 0 -> (xs, f_opt)
-            | _ -> exhaustive_unit_propagation xs f_opt dl;;
+            | _ -> exhaustive_unit_propagation xs f_opt dl;;*)
+
+let rec exhaustive_unit_propagation assignment formula_opt dl =
+    let (xs, f_new, conf) = unit_propagation assignment formula_opt formula_opt dl in
+        match (compare xs assignment) with
+            | 0 -> (xs, f_new, conf)
+            | _ -> (
+                    match conf with
+                    | false -> exhaustive_unit_propagation xs f_new dl
+                    | true -> (xs, f_new, conf)
+                   );;
+
 
 (* Optimized to not include any 'is_assigned' call. This is only possible
    because model_found is always called first and removes false literals 
    from the first unsatisfied clause, leaving only unassigned literals
    in that clause *)
-let rec decide assignment clause dl =
+(* let rec decide assignment clause dl =
     match (clause, assignment) with
         | (Disjunction (x :: xs), Assignment ys) -> (
                                                      match x with
@@ -226,13 +335,33 @@ let rec decide assignment clause dl =
                                                                             )
                                                         | _ -> failwith "[Invalid argument] decide: formula not in CNF"
                                                     )
-        | _ -> failwith "[Invalid argument] decide";;
+        | _ -> failwith "[Invalid argument] decide";; *)
 
-let rec decision assignment formula dl = 
+(* let rec decision assignment formula dl = 
     match formula with
         | Formula (Conjunction ([])) -> (assignment, dl, false)
         | Formula (Conjunction (x :: xs)) -> decide assignment x dl
-        | _ -> failwith "[Invalid argument] decision";;
+        | _ -> failwith "[Invalid argument] decision";; *)
+
+let rec decision assignment formula_opt dl = 
+    match formula_opt with 
+        | (Formula (Conjunction ([]))) -> failwith "[Invalid argument] empty formula"
+        | (Formula (Conjunction ((Disjunction (x)) :: xs))) -> (
+                                                                match (length x) with
+                                                                    | 1 -> let (f_new, conf) = propagate formula_opt (hd x) [] false in
+                                                                            let Assignment (ys) = assignment in (
+                                                                                                                 match (hd x) with
+                                                                                                                    | Atom (y) -> ((Assignment (ys @ [(y, true, false, dl)])), f_new, conf)
+                                                                                                                    | Not (Atom (y)) -> ((Assignment (ys @ [(y, false, false, dl)])), f_new, conf)
+                                                                                                                )
+                                                                    | _ -> let (f_new, conf) = propagate formula_opt (hd x) [] false in 
+                                                                            let Assignment (ys) = assignment in (
+                                                                                                                 match (hd x) with
+                                                                                                                    | Atom (y) -> ((Assignment (ys @ [(y, true, true, dl + 1)])), f_new, conf)
+                                                                                                                    | Not (Atom (y)) -> ((Assignment (ys @ [(y, false, true, dl + 1)])), f_new, conf)
+                                                                                                                ) 
+                                                               )
+        | _ -> failwith "[Invalid argument] formula not in cnf";;    
 
 let learn formula clause =
     match formula with
@@ -385,16 +514,16 @@ let backtrack assignment dl = Assignment (backtrack_rec assignment dl []);;
 (* 'formula_opt' is an optimized alternative formula where every *)
 (* satisfied clause has been removed to make most of the function *)
 (* calls in the procedure more efficient *)
-let rec dpll_rec assignment formula formula_opt dl = 
-    printf "\n\n"; Printing.print_assignment assignment; printf "\n\n"; match (model_found assignment formula_opt) with
+(*let rec dpll_rec assignment formula formula_opt dl = 
+    match (model_found assignment formula_opt) with
         | (true, _, _) -> (
                            match (Util.to_simplex_format_init assignment) with 
                             | (sf_assignment, cs) -> ( 
                                                       match Simplex.simplex sf_assignment with
                                                         | Some (x) -> true
-                                                        | None -> printf "\n\nRESTART\n\n"; restart (learn formula (Disjunction (transform_to_neg_clause cs)))
+                                                        | None -> restart (learn formula (Disjunction (transform_to_neg_clause cs)))
                                                      )
-                         )
+                           )
         | (false, formula_new, false) -> (
                                           let (xs, f_opt) = (exhaustive_unit_propagation assignment formula_new dl) in 
                                                  match (compare assignment xs) with
@@ -430,9 +559,42 @@ let rec dpll_rec assignment formula formula_opt dl =
                                                            )
                                                     | _ -> dpll_rec xs formula f_opt dl
                                                )
-                                  );;*)
+                                  );;*) *)
 
-and dpll formula = dpll_rec (unit (Assignment ([])) formula) formula formula 0
+(* and dpll formula = dpll_rec (unit (Assignment ([])) formula) formula formula 0 *)
+
+let rec dpll_rec assignment formula formula_opt dl =
+    match (model_found formula_opt) with
+    | true -> (
+               match (Util.to_simplex_format_init assignment) with 
+                            | (sf_assignment, cs) -> ( 
+                                                      match Simplex.simplex sf_assignment with
+                                                        | Some (x) -> true
+                                                        | None -> restart (learn formula (Disjunction (transform_to_neg_clause cs)))
+                                                     )
+              )
+    | false -> (
+                let (xs, f_new, conf) = (exhaustive_unit_propagation assignment formula_opt dl) in 
+                    match conf with 
+                        | true -> ( 
+                                   match (has_decision_literals xs) with 
+                                    | false -> false
+                                    | true -> let (ys, bj_clause) = (backjump xs formula) in let formula_l = (learn formula bj_clause) in dpll_rec ys formula_l formula_l (get_current_decision_level ys)
+                                  )
+                        | false -> (
+                                    match (compare assignment xs) with
+                                        | 0 -> (
+                                                match (decision assignment f_new dl) with
+                                                    | (ys, f_new_d, false) -> dpll_rec ys formula f_new_d (dl + 1)
+                                                    | (ys, _, true) -> ( 
+                                                                        let (zs, bj_clause) = (backjump ys formula) in let formula_l = (learn formula bj_clause) in dpll_rec ys formula_l formula_l (get_current_decision_level zs)
+                                                                       )
+                                               )
+                                        | _ -> dpll_rec xs formula f_new dl
+                                   )
+               )
+
+and dpll formula = dpll_rec (Assignment ([])) formula formula 0
 
 and restart formula = dpll formula;;
 
