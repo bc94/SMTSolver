@@ -626,6 +626,58 @@ and dpll formula = (*printf "FORMULA: "; Printing.print_formula formula; printf 
 
 and restart formula = dpll formula;;
 
+let rec dpll_inc_rec assignment formula formula_opt dl =
+    (*Printing.print_assignment assignment; printf "\n\n";*) match (model_found formula_opt) with
+    | true -> (
+               match (Util.to_simplex_format_init assignment) with 
+                            | (sf_assignment, cs) -> ( 
+                                                      match Simplex.simplex sf_assignment with
+                                                        | Some (x) -> true
+                                                        | None -> restart_inc (learn formula (Disjunction (transform_to_neg_clause cs)))
+                                                     )
+              )
+    | false -> (
+                let (xs, f_new, conf) = (unit_propagation assignment formula_opt formula_opt dl) in 
+                    match conf with 
+                        | true -> ( 
+                                   match (has_decision_literals xs) with 
+                                    | false -> false
+                                    | true -> let (ys, bj_clause) = (backjump xs formula) in 
+                                        (
+                                         match bj_clause with 
+                                            | Disjunction ([]) -> dpll_inc_rec ys formula formula (get_current_decision_level ys)
+                                            | Disjunction (zs) -> let formula_l = (learn formula bj_clause) in dpll_inc_rec ys formula_l formula_l (get_current_decision_level ys)
+                                        )
+                                  )
+                        | false -> (
+                                    match (compare assignment xs) with
+                                        | 0 -> (
+                                                match (Util.to_simplex_format_init assignment) with 
+                                                                | (sf_assignment, cs) -> ( 
+                                                                                        match Simplex.simplex sf_assignment with
+                                                                                            | Some (x) -> (
+                                                                                                            match (decision assignment f_new dl) with
+                                                                                                                | (ys, f_new_d, false) -> dpll_inc_rec ys formula f_new_d (dl + 1)
+                                                                                                                | (ys, _, true) -> ( 
+                                                                                                                                    let (zs, bj_clause) = (backjump ys formula) in 
+                                                                                                                                    (
+                                                                                                                                    match bj_clause with
+                                                                                                                                        | Disjunction ([]) -> dpll_inc_rec ys formula formula (get_current_decision_level ys)
+                                                                                                                                        | Disjunction (ws) -> let formula_l = (learn formula bj_clause) in dpll_inc_rec ys formula_l formula_l (get_current_decision_level zs)
+                                                                                                                                    )
+                                                                                                                                )
+                                                                                                        )
+                                                                                            | None -> restart_inc (learn formula (Disjunction (transform_to_neg_clause cs)))
+                                                                                        )
+                                                )
+                                        | _ -> dpll_inc_rec xs formula f_new dl
+                                   )
+               )
+
+and dpll_inc formula = (*printf "FORMULA: "; Printing.print_formula formula; printf "\n\n";*) dpll_inc_rec (Assignment ([])) formula formula 0
+
+and restart_inc formula = dpll_inc formula;;
+
 let sat formula = 
     match (dpll formula) with
         | true -> printf "SAT\n"
