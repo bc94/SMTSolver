@@ -1,3 +1,5 @@
+module TWL_Map = Map.Make(String);;
+
 open String
 open Types
 open List
@@ -677,6 +679,51 @@ let rec dpll_inc_rec assignment formula formula_opt dl =
 and dpll_inc formula = (*printf "FORMULA: "; Printing.print_formula formula; printf "\n\n";*) dpll_inc_rec (Assignment ([])) formula formula 0
 
 and restart_inc formula = dpll_inc formula;;
+
+(**********************************************)
+(* Two-watched-literal implementation of DPLL *)
+(**********************************************)
+
+(* How to use the map data structure: https://ocaml.org/learn/tutorials/map.html *)
+
+let rec construct_watch_lists formula m = 
+    match formula with
+        | Formula (Conjunction ([])) -> m
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match x with
+                                                | Disjunction (w1 :: w2 :: ws) -> construct_watch_lists (Formula (Conjunction (xs))) (TWL_Map.add (Printing.print_element w2) ((TWL_Map.find (Printing.print_element w2) m) @ [x]) (TWL_Map.add (Printing.print_element w1) ((TWL_Map.find (Printing.print_element w1) m) @ [x]) m))
+                                                | _ -> failwith "[Invalid argument] construct_watch_lists: clause contains less than 2 literals"
+                                             )
+        | _ -> failwith "[Invalid argument] construct_watch_lists: formula not in CNF";;
+
+let rec add_clause_keys clause m = 
+    match clause with
+        | Disjunction ([]) -> m
+        | Disjunction (x :: xs) -> (
+                                    match x with
+                                        | Atom (y) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Not (Atom (y)))) [] m))
+                                        | Not (Atom (y)) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Atom (y))) [] m))
+                                   )
+        | _ -> failwith "[Invalid argument] add_clause_keys: formula not in CNF or contains unit clauses";;
+
+(* Before calling add_all_keys all unit clauses have to be removed from the formula *)
+let rec add_all_keys formula_it formula m =
+    match formula_it with
+        | Formula (Conjunction ([])) -> construct_watch_lists formula m
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match x with 
+                                                | Disjunction (y) -> add_all_keys (Formula (Conjunction (xs))) formula (add_clause_keys x m)
+                                                | _ -> failwith "[Invalid argument] add_all_keys: formula must not contain unit clauses"
+                                             )
+        | _ -> failwith "[Invalid argument] add_all_keys: formula not in CNF";;
+
+let construct_map formula = add_all_keys formula formula TWL_Map.empty;;
+
+let rec dpll_twl_rec f_map = failwith "placeholder";;
+(* TODO: remove unit clauses from formula before constructing a map *)
+let dpll_twl formula = dpll_twl_rec (construct_map formula);;
+
+(**********************************************)
 
 let sat formula = 
     match (dpll formula) with
