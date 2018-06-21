@@ -684,6 +684,60 @@ and restart_inc formula = dpll_inc formula;;
 (* Two-watched-literal implementation of DPLL *)
 (**********************************************)
 
+let rec check_clause assignment f_map clause literal prop conf = 
+    match clause with
+        | Disjunction (w1 :: w2 :: ws) -> (
+                                           match (compare w1 literal) with
+                                            | 0 -> if is_true assignment w2 
+                                                   then (f_map, prop, conf)
+                                                   else (
+                                                         if is_assigned assignment w2 
+                                                         then (f_map, prop, [clause])
+                                                         else (
+                                                               match (unassigned_or_true assignment (Disjunction (ws))) with
+                                                                | [] -> (f_map, [w2], conf)
+                                                                | x :: xs -> (TWL_Map.add (Printing.print_element x) ((TWL_Map.find (Printing.print_element x) f_map) @ (x :: w2 :: (filter (fun x -> (compare x w1) <> 0) ws))) (TWL_Map.add (Printing.print_element w1) (filter (fun x -> (compare x clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) f_map), prop, conf)
+                                                              )
+                                                        )
+                                            | _ -> (
+                                                    match (compare w2 literal) with
+                                                     | 0 -> if is_true assignment w1 
+                                                            then (f_map, prop, conf)
+                                                            else (
+                                                                    if is_assigned assignment w1 
+                                                                    then (f_map, prop, [clause])
+                                                                    else (
+                                                                        match (unassigned_or_true assignment (Disjunction (ws))) with
+                                                                            | [] -> (f_map, [w1], conf)
+                                                                            | x :: xs -> (TWL_Map.add (Printing.print_element x) ((TWL_Map.find (Printing.print_element x) f_map) @ (x :: w1 :: (filter (fun x -> (compare x w2) <> 0) ws))) (TWL_Map.add (Printing.print_element w2) (filter (fun x -> (compare x clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) f_map), prop, conf)
+                                                                        )
+                                                                    )
+                                                     | _ -> failwith "[Invalid argument] check_clause: clause in wrong watch list"
+                                                   )
+                                          )
+        | _ -> failwith "[Invalid argument] check_clause";;
+
+let rec update_clauses assignment f_map clauses literal prop conf = 
+    match clauses with
+        | [] -> (f_map, prop, conf)
+        | x :: xs -> let (new_map, new_prop, new_conf) = (check_clause assignment f_map x literal prop conf) in 
+                        update_clauses assignment new_map xs literal new_prop new_conf;;
+
+let update_watch_lists assignment f_map literal = update_clauses assignment f_map (TWL_Map.find (Printing.print_element literal) f_map) literal [] [];;
+
+let rec decision_twl assignment f_map literals dl =
+    match is_assigned assignment (hd literals) with
+        | true -> decision_twl assignment f_map (tl literals) dl
+        | false -> (
+                    let Assignment (xs) = assignment in
+                     match (hd literals) with
+                        | Atom (x) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
+                                        (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, prop, conf)
+                        | Not (Atom (x)) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in
+                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, prop, conf) 
+                   );;
+
+
 (* How to use the map data structure: https://ocaml.org/learn/tutorials/map.html *)
 
 let rec construct_watch_lists formula m = 
@@ -696,32 +750,32 @@ let rec construct_watch_lists formula m =
                                              )
         | _ -> failwith "[Invalid argument] construct_watch_lists: formula not in CNF";;
 
-let rec add_clause_keys clause m = 
+let rec add_clause_keys clause m literals = 
     match clause with
-        | Disjunction ([]) -> m
+        | Disjunction ([]) -> (m, literals)
         | Disjunction (x :: xs) -> (
                                     match x with
-                                        | Atom (y) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Not (Atom (y)))) [] m))
-                                        | Not (Atom (y)) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Atom (y))) [] m))
+                                        | Atom (y) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Not (Atom (y)))) [] m)) (literals @ [x])
+                                        | Not (Atom (y)) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Atom (y))) [] m)) (literals @ [x])
                                    )
         | _ -> failwith "[Invalid argument] add_clause_keys: formula not in CNF or contains unit clauses";;
 
 (* Before calling add_all_keys all unit clauses have to be removed from the formula *)
-let rec add_all_keys formula_it formula m =
+let rec add_all_keys formula_it formula m literals =
     match formula_it with
-        | Formula (Conjunction ([])) -> construct_watch_lists formula m
+        | Formula (Conjunction ([])) -> (construct_watch_lists formula m, literals)
         | Formula (Conjunction (x :: xs)) -> (
                                               match x with 
-                                                | Disjunction (y) -> add_all_keys (Formula (Conjunction (xs))) formula (add_clause_keys x m)
+                                                | Disjunction (y) -> let (new_m, lits) = (add_clause_keys x m literals) in add_all_keys (Formula (Conjunction (xs))) formula new_m lits
                                                 | _ -> failwith "[Invalid argument] add_all_keys: formula must not contain unit clauses"
                                              )
         | _ -> failwith "[Invalid argument] add_all_keys: formula not in CNF";;
 
-let construct_map formula = add_all_keys formula formula TWL_Map.empty;;
+let construct_map formula = add_all_keys formula formula TWL_Map.empty [];;
 
-let rec dpll_twl_rec f_map = failwith "placeholder";;
+let rec dpll_twl_rec assignment f_map literals dl = failwith "placeholder";;
 (* TODO: remove unit clauses from formula before constructing a map *)
-let dpll_twl formula = dpll_twl_rec (construct_map formula);;
+let dpll_twl formula = let (f_map, literals) = construct_map formula in dpll_twl_rec (Assignment ([])) f_map literals 0;;
 
 (**********************************************)
 
