@@ -737,6 +737,27 @@ let rec decision_twl assignment f_map literals dl =
                                                 (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, prop, conf) 
                    );;
 
+let rec unit_propagation_twl assignment f_map prop dl = 
+    match prop with 
+        | [] -> (assignment, f_map, [])
+        | x :: xs -> (
+                      let Assignment (ys) = assignment in 
+                       match x with
+                        | Atom (y) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map x in 
+                                        (
+                                         match conf with 
+                                            | [] -> unit_propagation_twl (Assignment (ys @ [(y, true, false, dl)])) new_map (xs @ new_prop) dl
+                                            | z :: zs -> (assignment, f_map, z :: zs)
+                                        )
+                        | Not (Atom (y)) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map x in 
+                                        ( 
+                                         match conf with
+                                            | [] -> unit_propagation_twl (Assignment (ys @ [(y, false, false, dl)])) new_map (xs @ new_prop) dl
+                                            | z :: zs -> (assignment, f_map, z :: zs)
+                                        )
+                        | _ -> failwith "[Invalid argument] unit_propagation_twl: list of propagation literals contains a non-literal element"
+                     );;
+
 
 (* How to use the map data structure: https://ocaml.org/learn/tutorials/map.html *)
 
