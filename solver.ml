@@ -684,6 +684,16 @@ and restart_inc formula = dpll_inc formula;;
 (* Two-watched-literal implementation of DPLL *)
 (**********************************************)
 
+let rec model_found_twl assignment formula = 
+    match formula with
+        | Formula (Conjunction ([])) -> true
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match is_clause_satisfied assignment x with
+                                                | true -> model_found_twl assignment (Formula (Conjunction (xs)))
+                                                | false -> false
+                                             )
+        | _ -> failwith "[Invalid argument] model_found_twl: formula not in CNF";;
+
 let rec check_clause assignment f_map clause literal prop conf = 
     match clause with
         | Disjunction (w1 :: w2 :: ws) -> (
@@ -723,6 +733,8 @@ let rec update_clauses assignment f_map clauses literal prop conf =
         | x :: xs -> let (new_map, new_prop, new_conf) = (check_clause assignment f_map x literal prop conf) in 
                         update_clauses assignment new_map xs literal new_prop new_conf;;
 
+(* NOTE: literal should always be the negation of the literal that was just assigned *)
+(*       This function then updates the watch list of the negated literal *)
 let update_watch_lists assignment f_map literal = update_clauses assignment f_map (TWL_Map.find (Printing.print_element literal) f_map) literal [] [];;
 
 let rec decision_twl assignment f_map literals dl =
@@ -743,13 +755,13 @@ let rec unit_propagation_twl assignment f_map prop dl =
         | x :: xs -> (
                       let Assignment (ys) = assignment in 
                        match x with
-                        | Atom (y) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map x in 
+                        | Atom (y) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map (Not (Atom (y))) in 
                                         (
                                          match conf with 
                                             | [] -> unit_propagation_twl (Assignment (ys @ [(y, true, false, dl)])) new_map (xs @ new_prop) dl
                                             | z :: zs -> (assignment, f_map, z :: zs)
                                         )
-                        | Not (Atom (y)) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map x in 
+                        | Not (Atom (y)) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map (Atom (y)) in 
                                         ( 
                                          match conf with
                                             | [] -> unit_propagation_twl (Assignment (ys @ [(y, false, false, dl)])) new_map (xs @ new_prop) dl
@@ -758,6 +770,28 @@ let rec unit_propagation_twl assignment f_map prop dl =
                         | _ -> failwith "[Invalid argument] unit_propagation_twl: list of propagation literals contains a non-literal element"
                      );;
 
+let backjump_twl assignment formula conf = 
+    (*printf "BACKJUMP\n\n";*) match assignment with 
+        | Assignment (xs) -> let (Disjunction (ys)) = (find_backjump_clause xs formula conf) in
+                                    (
+                                     match (length ys) with 
+                                        | 0 -> (Assignment (backjump_rec assignment
+                                                                          0
+                                                                          (Disjunction (ys))
+                                                                          []),
+                                                 Disjunction (ys))
+                                        | 1 -> (Assignment (backjump_rec assignment
+                                                                          0
+                                                                          (Disjunction (ys))
+                                                                          []),
+                                                 Disjunction (ys))
+                                        | _ ->  (Assignment (backjump_rec assignment
+                                                            (get_decision_level xs (hd (tl (rev ys)))) 
+                                                            (Disjunction (ys))
+                                                            []),
+                                                Disjunction (ys))
+                                    )
+        | _ -> failwith "[Invalid argument] backjump_twl";;
 
 (* How to use the map data structure: https://ocaml.org/learn/tutorials/map.html *)
 
@@ -792,11 +826,70 @@ let rec add_all_keys formula_it formula m literals =
                                              )
         | _ -> failwith "[Invalid argument] add_all_keys: formula not in CNF";;
 
+(* Needed for learning *)
+let add_clause_to_map f_map clause = 
+    match clause with
+        | Disjunction (w1 :: w2 :: ws) -> TWL_Map.add (Printing.print_element w2) ((TWL_Map.find (Printing.print_element w2) f_map) @ [clause]) (TWL_Map.add (Printing.print_element w1) ((TWL_Map.find (Printing.print_element w1) f_map) @ [clause]) f_map)
+        | _ -> failwith "[Invalid argument] add_clause_to_map: argument not a clause";;
+
 let construct_map formula = add_all_keys formula formula TWL_Map.empty [];;
 
-let rec dpll_twl_rec assignment f_map literals dl = failwith "placeholder";;
+let rec preprocess_unit_clauses = "placeholder";;
+
+let rec dpll_twl_rec assignment formula f_map literals dl = 
+    match model_found_twl assignment formula with
+        | true -> (
+                   match (Util.to_simplex_format_init assignment) with 
+                    | (sf_assignment, cs) -> ( 
+                                              match Simplex.simplex sf_assignment with
+                                                | Some (x) -> true
+                                                | None -> let ys = (Disjunction (transform_to_neg_clause cs)) in 
+                                                            restart_twl (learn formula ys) (add_clause_to_map f_map ys) literals
+                                             )
+                  )
+        | false -> let (new_assignment, new_map, new_dl, prop, conf) = decision_twl assignment f_map literals 0 in 
+                    (
+                     match conf with 
+                        | [] -> (
+                                 match prop with
+                                    | [] -> dpll_twl_rec new_assignment formula new_map literals new_dl
+                                    | x :: xs -> let (n_assignment, n_map, n_conf) = unit_propagation_twl new_assignment new_map prop new_dl in 
+                                                    (
+                                                     match n_conf with
+                                                      | [] -> (
+                                                               match (Util.to_simplex_format_init n_assignment) with 
+                                                                    | (sf_assignment, cs) -> ( 
+                                                                                            match Simplex.simplex sf_assignment with
+                                                                                                | Some (x) -> dpll_twl_rec n_assignment formula n_map literals new_dl
+                                                                                                | None -> let ys = (Disjunction (transform_to_neg_clause cs)) in 
+                                                                                                           restart_twl (learn formula ys) (add_clause_to_map f_map ys) literals
+                                                                                            )
+                                                              )
+                                                      | x :: xs -> (
+                                                                    let (ys, bj_clause) = (backjump_twl new_assignment formula (Disjunction (n_conf))) in 
+                                                                        (
+                                                                         match bj_clause with
+                                                                            | Disjunction ([]) -> dpll_twl_rec ys formula new_map literals (get_current_decision_level ys)
+                                                                            | Disjunction (zs) -> let formula_l = (learn formula bj_clause) in dpll_twl_rec ys formula_l (add_clause_to_map new_map bj_clause) literals (get_current_decision_level ys)
+                                                                        )
+                                                                   )
+                                                    )
+                                )
+                        | x :: xs -> (
+                                      let (ys, bj_clause) = (backjump_twl new_assignment formula (Disjunction (conf))) in 
+                                        (
+                                         match bj_clause with
+                                            | Disjunction ([]) -> dpll_twl_rec ys formula new_map literals (get_current_decision_level ys)
+                                            | Disjunction (zs) -> let formula_l = (learn formula bj_clause) in dpll_twl_rec ys formula_l (add_clause_to_map new_map bj_clause) literals (get_current_decision_level ys)
+                                        )
+                                     )
+                                      
+                    )
+
 (* TODO: remove unit clauses from formula before constructing a map *)
-let dpll_twl formula = let (f_map, literals) = construct_map formula in dpll_twl_rec (Assignment ([])) f_map literals 0;;
+and dpll_twl formula = let (f_map, literals) = construct_map formula in dpll_twl_rec (Assignment ([])) formula f_map literals 0
+
+and restart_twl formula f_map literals = dpll_twl_rec (Assignment ([])) formula f_map literals 0;;
 
 (**********************************************)
 
