@@ -427,7 +427,7 @@ let rec find_backjump_clause_l (assignment : (constraint_n * bool * bool * int) 
         | false -> find_backjump_clause_l (tl assignment) formula clause (ls @ [(hd assignment)])
         | _ -> failwith "[Invalid argument] find_backjump_clause";;
 
-let find_backjump_clause (assignment : (constraint_n * bool * bool * int) list) formula clause = Disjunction (transform_to_neg_clause (get_decision_literals (Assignment (find_backjump_clause_l (find_minimal_i assignment formula clause) formula clause []))));;
+let find_backjump_clause (assignment : (constraint_n * bool * bool * int) list) formula clause = (Printing.print_assignment (Assignment(assignment))); printf "\nCONFLICT: %s\n\n" (Printing.print_element clause); Disjunction (transform_to_neg_clause (get_decision_literals (Assignment (find_backjump_clause_l (find_minimal_i assignment formula clause) formula clause []))));;
         
 (* Get target decision level for backjumping. *)
 (* Relies on increasing order of decision levels in the assignment *)
@@ -695,7 +695,7 @@ let rec model_found_twl assignment formula =
         | _ -> failwith "[Invalid argument] model_found_twl: formula not in CNF";;
 
 let rec check_clause assignment f_map clause literal prop conf = 
-    match clause with
+    printf "CHECK CLAUSE: %s WITH LITERAL:" (Printing.print_element clause); printf " %s\n\n" (Printing.print_element literal); match clause with
         | Disjunction (w1 :: w2 :: ws) -> (
                                            match (compare w1 literal) with
                                             | 0 -> if is_true assignment w2 
@@ -706,7 +706,18 @@ let rec check_clause assignment f_map clause literal prop conf =
                                                          else (
                                                                match (unassigned_or_true assignment (Disjunction (ws))) with
                                                                 | [] -> (f_map, [w2], conf)
-                                                                | x :: xs -> (TWL_Map.add (Printing.print_element x) ((TWL_Map.find (Printing.print_element x) f_map) @ (x :: w2 :: (filter (fun x -> (compare x w1) <> 0) ws))) (TWL_Map.add (Printing.print_element w1) (filter (fun x -> (compare x clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) f_map), prop, conf)
+                                                                | x :: xs -> printf "NEW CLAUSE: %s\n\n" (Printing.print_element (Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))); 
+                                                                                                                                        (TWL_Map.add (Printing.print_element w1) 
+                                                                                                                                                     (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
+                                                                                                                                                     (TWL_Map.add (Printing.print_element w2) 
+                                                                                                                                                                  (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
+                                                                                                                                                                  (TWL_Map.add (Printing.print_element x) 
+                                                                                                                                                                               ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                                                                                               (TWL_Map.add (Printing.print_element w2) 
+                                                                                                                                                                                            ((TWL_Map.find (Printing.print_element w2) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                                                                                                            f_map))),
+                                                                                                                            prop, 
+                                                                                                                            conf)
                                                               )
                                                         )
                                             | _ -> (
@@ -719,7 +730,18 @@ let rec check_clause assignment f_map clause literal prop conf =
                                                                     else (
                                                                         match (unassigned_or_true assignment (Disjunction (ws))) with
                                                                             | [] -> (f_map, [w1], conf)
-                                                                            | x :: xs -> (TWL_Map.add (Printing.print_element x) ((TWL_Map.find (Printing.print_element x) f_map) @ (x :: w1 :: (filter (fun x -> (compare x w2) <> 0) ws))) (TWL_Map.add (Printing.print_element w2) (filter (fun x -> (compare x clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) f_map), prop, conf)
+                                                                            | x :: xs -> printf "NEW CLAUSE: %s\n\n" (Printing.print_element (Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))); 
+                                                                                         (TWL_Map.add (Printing.print_element w1) 
+                                                                                                      (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
+                                                                                                      (TWL_Map.add (Printing.print_element w2) 
+                                                                                                                   (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
+                                                                                                                   (TWL_Map.add (Printing.print_element x) 
+                                                                                                                                ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                                                (TWL_Map.add (Printing.print_element w1) 
+                                                                                                                                             ((TWL_Map.find (Printing.print_element w2) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                                                                            f_map))),
+                                                                                         prop, 
+                                                                                         conf)
                                                                         )
                                                                     )
                                                      | _ -> failwith "[Invalid argument] check_clause: clause in wrong watch list"
@@ -737,20 +759,28 @@ let rec update_clauses assignment f_map clauses literal prop conf =
 (*       This function then updates the watch list of the negated literal *)
 let update_watch_lists assignment f_map literal = update_clauses assignment f_map (TWL_Map.find (Printing.print_element literal) f_map) literal [] [];;
 
-let rec decision_twl assignment f_map literals dl =
-    match is_assigned assignment (hd literals) with
-        | true -> decision_twl assignment f_map (tl literals) dl
+let rec choose_decision_literal assignment clause = 
+    match clause with
+        | Disjunction ([]) -> failwith "[Invalid argument] choose_decision_literal: clause does not contain a literal suited for decision"
+        | Disjunction (x :: xs) -> if is_assigned assignment x 
+                                   then choose_decision_literal assignment (Disjunction (xs))
+                                   else x;;
+
+let rec decision_twl formula assignment f_map dl =
+    let Formula (Conjunction (cs)) = formula in 
+     match is_clause_satisfied assignment (hd cs) with
+        | true -> decision_twl (Formula (Conjunction (tl cs))) assignment f_map dl
         | false -> (
                     let Assignment (xs) = assignment in
-                     match (hd literals) with
-                        | Atom (x) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
+                     match choose_decision_literal assignment (hd cs) with
+                        | Atom (x) -> printf "Decision: %s\n\n" (Printing.print_element (Atom (x))); let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
                                         (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, prop, conf)
-                        | Not (Atom (x)) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in
+                        | Not (Atom (x)) -> printf "Decision: %s\n\n" (Printing.print_element (Not (Atom (x)))); let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in
                                                 (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, prop, conf) 
                    );;
 
 let rec unit_propagation_twl assignment f_map prop dl = 
-    match prop with 
+    (*printf "PROPAGATION\n\n";*) match prop with 
         | [] -> (assignment, f_map, [])
         | x :: xs -> (
                       let Assignment (ys) = assignment in 
@@ -759,19 +789,19 @@ let rec unit_propagation_twl assignment f_map prop dl =
                                         (
                                          match conf with 
                                             | [] -> unit_propagation_twl (Assignment (ys @ [(y, true, false, dl)])) new_map (xs @ new_prop) dl
-                                            | z :: zs -> (assignment, f_map, z :: zs)
+                                            | z :: zs -> ((Assignment (ys @ [(y, true, false, dl)])), new_map, z :: zs)
                                         )
                         | Not (Atom (y)) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map (Atom (y)) in 
                                         ( 
                                          match conf with
                                             | [] -> unit_propagation_twl (Assignment (ys @ [(y, false, false, dl)])) new_map (xs @ new_prop) dl
-                                            | z :: zs -> (assignment, f_map, z :: zs)
+                                            | z :: zs -> ((Assignment (ys @ [(y, false, false, dl)])), new_map, z :: zs)
                                         )
                         | _ -> failwith "[Invalid argument] unit_propagation_twl: list of propagation literals contains a non-literal element"
                      );;
 
 let backjump_twl assignment formula conf = 
-    (*printf "BACKJUMP\n\n";*) match assignment with 
+    printf "BACKJUMP\n\n"; match assignment with 
         | Assignment (xs) -> let (Disjunction (ys)) = (find_backjump_clause xs formula conf) in
                                     (
                                      match (length ys) with 
@@ -834,10 +864,21 @@ let add_clause_to_map f_map clause =
 
 let construct_map formula = add_all_keys formula formula TWL_Map.empty [];;
 
-let rec preprocess_unit_clauses = "placeholder";;
+(* removes unit clauses from the formula *)
+let rec preprocess_unit_clauses_rec formula new_formula new_assignment prop = 
+    match formula with 
+        | Formula (Conjunction ([])) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), prop)
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match x with 
+                                                | Disjunction (ys) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) (new_formula @ [x]) new_assignment prop
+                                                | Atom (y) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (prop @ [x])
+                                                | Not (Atom (y)) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (prop @ [x])
+                                             );;
+
+let preprocess_unit_clauses formula = preprocess_unit_clauses_rec formula [] [];;
 
 let rec dpll_twl_rec assignment formula f_map literals dl = 
-    match model_found_twl assignment formula with
+    Printing.print_assignment assignment; printf "\n\n"; match model_found_twl assignment formula with
         | true -> (
                    match (Util.to_simplex_format_init assignment) with 
                     | (sf_assignment, cs) -> ( 
@@ -847,7 +888,7 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
                                                             restart_twl (learn formula ys) (add_clause_to_map f_map ys) literals
                                              )
                   )
-        | false -> let (new_assignment, new_map, new_dl, prop, conf) = decision_twl assignment f_map literals 0 in 
+        | false -> let (new_assignment, new_map, new_dl, prop, conf) = decision_twl formula assignment f_map dl in 
                     (
                      match conf with 
                         | [] -> (
@@ -866,17 +907,18 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
                                                                                             )
                                                               )
                                                       | x :: xs -> (
-                                                                    let (ys, bj_clause) = (backjump_twl new_assignment formula (Disjunction (n_conf))) in 
+                                                                    let (ys, bj_clause) = (backjump_twl n_assignment formula (hd n_conf)) in 
                                                                         (
-                                                                         match bj_clause with
+                                                                         printf "BJ_CLAUSE: %s\n\n" (Printing.print_element bj_clause); match bj_clause with
                                                                             | Disjunction ([]) -> dpll_twl_rec ys formula new_map literals (get_current_decision_level ys)
                                                                             | Disjunction (zs) -> let formula_l = (learn formula bj_clause) in dpll_twl_rec ys formula_l (add_clause_to_map new_map bj_clause) literals (get_current_decision_level ys)
+                                                                            (* TODO: add learn for unit clauses *)
                                                                         )
                                                                    )
                                                     )
                                 )
                         | x :: xs -> (
-                                      let (ys, bj_clause) = (backjump_twl new_assignment formula (Disjunction (conf))) in 
+                                      let (ys, bj_clause) = (backjump_twl new_assignment formula (hd conf)) in 
                                         (
                                          match bj_clause with
                                             | Disjunction ([]) -> dpll_twl_rec ys formula new_map literals (get_current_decision_level ys)
@@ -886,15 +928,27 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
                                       
                     )
 
-(* TODO: remove unit clauses from formula before constructing a map *)
-and dpll_twl formula = let (f_map, literals) = construct_map formula in dpll_twl_rec (Assignment ([])) formula f_map literals 0
+and dpll_twl formula = let (new_formula, new_assignment, prop) = preprocess_unit_clauses formula [] in 
+                        Printing.print_formula new_formula; let (f_map, literals) = construct_map new_formula in 
+                            let (n_assignment, n_map, conf) = unit_propagation_twl new_assignment f_map prop 0 in 
+                                (
+                                 match conf with
+                                    | [] -> dpll_twl_rec n_assignment new_formula n_map literals 0
+                                    | x :: xs -> false
+                                )
 
-and restart_twl formula f_map literals = dpll_twl_rec (Assignment ([])) formula f_map literals 0;;
+and restart_twl formula f_map literals = let (new_formula, new_assignment, prop) = preprocess_unit_clauses formula [] in 
+                                            let (n_assignment, n_map, conf) = unit_propagation_twl new_assignment f_map prop 0 in 
+                                                (
+                                                 match conf with
+                                                    | [] -> dpll_twl_rec n_assignment new_formula n_map literals 0
+                                                    | x :: xs -> false
+                                                );;
 
 (**********************************************)
 
 let sat formula = 
-    match (dpll formula) with
+    match (dpll_twl formula) with
         | true -> printf "SAT\n"
         | false -> printf "UNSAT\n";; 
                                
