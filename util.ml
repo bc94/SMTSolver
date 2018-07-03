@@ -133,6 +133,8 @@ let rec op_to_simplex_format operator varlist varcount =
                                        )       
         | _ -> failwith "[Invalid argument] op_to_simplex_format";;
 
+
+(* TODO: check if conversion is correct in regards to negation: x <= 1 negated should be x >= 0 and not x > 1 *)
 let rec to_simplex_format assignment varlist varcount result cs = 
     match assignment with
         | Assignment ([]) -> (result, Assignment (cs))

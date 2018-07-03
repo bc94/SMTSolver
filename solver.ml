@@ -876,14 +876,22 @@ let rec preprocess_unit_clauses_rec formula new_formula new_assignment prop =
 let preprocess_unit_clauses formula = preprocess_unit_clauses_rec formula [] [];;
 
 let rec dpll_twl_rec assignment formula f_map literals dl = 
-    (*Printing.print_assignment assignment; printf "\n\n";*) match model_found_twl assignment formula with
+    Printing.print_assignment assignment; printf "\n\n"; match model_found_twl assignment formula with
         | true -> (
                    match (Util.to_simplex_format_init assignment) with 
                     | (sf_assignment, cs) -> ( 
                                               match Simplex.simplex sf_assignment with
                                                 | Some (x) -> true
-                                                | None -> let ys = (Disjunction (transform_to_neg_clause cs)) in 
-                                                            restart_twl (learn formula ys) (add_clause_to_map f_map ys) literals
+                                                | None -> (
+                                                           match cs with 
+                                                            | Assignment ([z]) -> (
+                                                                                   match z with
+                                                                                    | (y, true, d, l) -> restart_twl_unit formula f_map literals y false
+                                                                                    | (y, false, d, l) -> restart_twl_unit formula f_map literals y true
+                                                                                  )
+                                                            | Assignment (zs) -> let ys = (Disjunction (transform_to_neg_clause cs)) in 
+                                                                                    restart_twl (learn formula ys) (add_clause_to_map f_map ys) literals
+                                                          )
                                              )
                   )
         | false -> let (new_assignment, new_map, new_dl, prop, conf) = decision_twl formula assignment f_map dl in 
@@ -900,8 +908,16 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
                                                                     | (sf_assignment, cs) -> ( 
                                                                                             match Simplex.simplex sf_assignment with
                                                                                                 | Some (x) -> dpll_twl_rec n_assignment formula n_map literals new_dl
-                                                                                                | None -> let ys = (Disjunction (transform_to_neg_clause cs)) in 
-                                                                                                           restart_twl (learn formula ys) (add_clause_to_map f_map ys) literals
+                                                                                                | None -> (
+                                                                                                            match cs with 
+                                                                                                                | Assignment ([z]) -> (
+                                                                                                                                       match z with
+                                                                                                                                        | (y, true, d, l) -> restart_twl_unit formula f_map literals y false
+                                                                                                                                        | (y, false, d, l) -> restart_twl_unit formula f_map literals y true
+                                                                                                                                      )
+                                                                                                                | Assignment (zs) -> let ys = (Disjunction (transform_to_neg_clause cs)) in 
+                                                                                                                                        restart_twl (learn formula ys) (add_clause_to_map f_map ys) literals
+                                                                                                          )
                                                                                             )
                                                               )
                                                       | x :: xs -> (
@@ -942,7 +958,15 @@ and restart_twl formula f_map literals = let (new_formula, new_assignment, prop)
                                                  match conf with
                                                     | [] -> dpll_twl_rec n_assignment new_formula n_map literals 0
                                                     | x :: xs -> false
-                                                );;
+                                                )
+                                                
+and restart_twl_unit formula f_map literals unit_literal lit_val = let (new_formula, new_assignment, prop) = preprocess_unit_clauses formula [] in
+                                                            let (n_assignment, n_map, conf) = let Assignment (xs) = new_assignment in unit_propagation_twl (Assignment (xs @ [(unit_literal, lit_val, false, 0)])) f_map prop 0 in 
+                                                                (
+                                                                 match conf with
+                                                                    | [] -> dpll_twl_rec n_assignment new_formula n_map literals 0
+                                                                    | x :: xs -> false
+                                                                );;
 
 (**********************************************)
 
