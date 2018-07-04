@@ -68,6 +68,26 @@ let rec is_clause_satisfied assignment clause =
                             )
         | _ -> failwith "[Invalid argument] second argument is not a Disjunction of element list";;
 
+let rec contains_unassigned_literal assignment clause = 
+    match clause with
+        | Disjunction ([]) -> false
+        | Disjunction (x :: xs) -> (
+                                    match (is_assigned assignment x) with
+                                        | true -> contains_unassigned_literal assignment (Disjunction (xs))
+                                        | false -> true
+                                   )
+        | Atom (x) -> (
+                       match (is_assigned assignment clause) with
+                        | true -> false 
+                        | false -> true
+                      )
+        | Not (Atom (x)) -> (
+                             match (is_assigned assignment clause) with
+                                | true -> false 
+                                | false -> true
+                            )
+        | _ -> failwith "[Invalid argument] contains_unassigned_literal: argument neither a close nor a literal";;
+
 (* Checking unassigned for single literal cases is not necessary since unit is always *)
 (* applied before ever calling this function, assigning values to all unit clauses  *)
 let rec unassigned_or_true_l assignment clause ls =
@@ -766,9 +786,9 @@ let rec choose_decision_literal assignment clause =
 
 let rec decision_twl formula assignment f_map dl =
     let Formula (Conjunction (cs)) = formula in 
-     match is_clause_satisfied assignment (hd cs) with
-        | true -> decision_twl (Formula (Conjunction (tl cs))) assignment f_map dl
-        | false -> (
+     match contains_unassigned_literal assignment (hd cs) with
+        | false -> decision_twl (Formula (Conjunction (tl cs))) assignment f_map dl
+        | true -> (
                     let Assignment (xs) = assignment in
                      match choose_decision_literal assignment (hd cs) with
                         | Atom (x) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
@@ -876,7 +896,7 @@ let rec preprocess_unit_clauses_rec formula new_formula new_assignment prop =
 let preprocess_unit_clauses formula = preprocess_unit_clauses_rec formula [] [];;
 
 let rec dpll_twl_rec assignment formula f_map literals dl = 
-    Printing.print_assignment assignment; printf "\n\n"; match model_found_twl assignment formula with
+    (*Printing.print_assignment assignment; printf "\n\n";*) match model_found_twl assignment formula with
         | true -> (
                    match (Util.to_simplex_format_init assignment) with 
                     | (sf_assignment, cs) -> ( 
