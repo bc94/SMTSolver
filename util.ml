@@ -134,7 +134,7 @@ let rec op_to_simplex_format operator varlist varcount =
         | _ -> failwith "[Invalid argument] op_to_simplex_format";;
 
 
-(* TODO: check if conversion is correct in regards to negation: x <= 1 negated should be x >= 0 and not x > 1 *)
+(* TODO: check if conversion is correct in regards to negation: x <= 1 negated should be x >= 2 and not x > 1 *)
 let rec to_simplex_format assignment varlist varcount result cs = 
     match assignment with
         | Assignment ([]) -> (result, Assignment (cs))
@@ -150,27 +150,27 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                             | (-1, true) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [Simplex.LEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
                                                                                                                                                                                                        (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) 
                                                                                                                                                                                (cs @ [(c, v, d, dl)])                        
-                                                                            | (-1, false) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [Simplex.GT ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
-                                                                                                                                                                                                       (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))])
+                                                                            | (-1, false) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [Simplex.GEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                       (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))])
                                                                                                                                                                                (cs @ [(c, v, d, dl)])                  
                                                                             | (m, true) -> to_simplex_format (Assignment (xs)) varlist varcount (result @ [Simplex.LEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
                                                                                                                                                                         (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))])
                                                                                                                                                 (cs @ [(c, v, d, dl)])       
-                                                                            | (m, false) -> to_simplex_format (Assignment (xs)) varlist varcount (result @ [Simplex.GT ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
-                                                                                                                                                                        (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))])
+                                                                            | (m, false) -> to_simplex_format (Assignment (xs)) varlist varcount (result @ [Simplex.GEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                        (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))])
                                                                                                                                                  (cs @ [(c, v, d, dl)])  
                                                                            )
                                                         | (Num (n), Var (x)) ->
                                                                            (
                                                                             match ((is_in_varlist varlist x), v) with
-                                                                            | (-1, true) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [Simplex.GT ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
-                                                                                                                                                                                                      (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))])
+                                                                            | (-1, true) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [Simplex.GEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                      (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))])
                                                                                                                                                                                (cs @ [(c, v, d, dl)]) 
                                                                             | (-1, false) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [Simplex.LEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))),
                                                                                                                                                                                                         (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) 
                                                                                                                                                                                 (cs @ [(c, v, d, dl)])
-                                                                            | (m, true) -> to_simplex_format (Assignment (xs)) varlist varcount (result @ [Simplex.GT ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
-                                                                                                                                                                       (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))])
+                                                                            | (m, true) -> to_simplex_format (Assignment (xs)) varlist varcount (result @ [Simplex.GEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                       (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))])
                                                                                                                                                 (cs @ [(c, v, d, dl)])
                                                                             | (m, false) -> to_simplex_format (Assignment (xs)) varlist varcount (result @ [Simplex.LEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
                                                                                                                                                                          (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))])
@@ -184,30 +184,34 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                         | (-1, true) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)] @ [(y, varcount + 2)]) (varcount + 2) (result @ [Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
                                                                                                                                                                                                                                            (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 2)))))])
                                                                                                                                                                                                                  (cs @ [(c, v, d, dl)])
-                                                                                        | (-1, false) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)] @ [(y, varcount + 2)]) (varcount + 2) (result @ [Simplex.GTPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
-                                                                                                                                                                                                                                           (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 2)))))])
-                                                                                                                                                                                                                  (cs @ [(c, v, d, dl)])
+                                                                                        | (_, false) -> ( 
+                                                                                                          match (transform_constraint (Var (x), Sum ([(Var (y)); (Num (1))]))) with 
+                                                                                                                | (Num (n), sums) -> (
+                                                                                                                                      match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                                        | (s_lp, newlist, newcount) -> 
+                                                                                                                                            to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                                    )
+                                                                                                         )
                                                                                         | (m, true) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
                                                                                                                                                                                                                     (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))))])
-                                                                                                                                                                                          (cs @ [(c, v, d, dl)])
-                                                                                        | (m, false) -> to_simplex_format (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [Simplex.GTPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
-                                                                                                                                                                                                                    (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))))])
-                                                                                                                                                                                           (cs @ [(c, v, d, dl)]) 
+                                                                                                                                                                                          (cs @ [(c, v, d, dl)]) 
                                                                                       )   
                                                                               | m1 -> (
                                                                                        match ((is_in_varlist varlist y), v) with 
                                                                                         | (-1, true) -> to_simplex_format (Assignment (xs)) (varlist @ [(y, varcount + 1)]) (varcount + 1) (result @ [Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m1))), 
                                                                                                                                                                                                                      (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))))])
                                                                                                                                                                                            (cs @ [(c, v, d, dl)]) 
-                                                                                        | (-1, false) -> to_simplex_format (Assignment (xs)) (varlist @ [(y, varcount + 1)]) (varcount + 1) (result @ [Simplex.GTPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m1))), 
-                                                                                                                                                                                                                     (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))))])
-                                                                                                                                                                                           (cs @ [(c, v, d, dl)])
+                                                                                        | (_, false) -> ( 
+                                                                                                          match (transform_constraint (Var (x), Sum ([(Var (y)); (Num (1))]))) with 
+                                                                                                                | (Num (n), sums) -> (
+                                                                                                                                      match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                                        | (s_lp, newlist, newcount) -> 
+                                                                                                                                            to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                                    )
+                                                                                                         )
                                                                                         | (m2, true) -> to_simplex_format (Assignment (xs)) varlist varcount (result @ [Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m1))), 
                                                                                                                                                                                        (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m2))))])
                                                                                                                                                              (cs @ [(c, v, d, dl)])
-                                                                                        | (m2, false) -> to_simplex_format (Assignment (xs)) varlist varcount (result @ [Simplex.GTPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m1))), 
-                                                                                                                                                                                       (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m2))))])
-                                                                                                                                                              (cs @ [(c, v, d, dl)])
                                                                                       ) 
                                                                             )
                                                         | (Sum (s), Var (x)) -> 
@@ -219,7 +223,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                                                (
                                                                                                                 match v with 
                                                                                                                 | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
-                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GT (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                )
                                                                                                 )
                                                                         )
@@ -231,7 +235,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GT (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                 | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                )
                                                                                                 )
@@ -245,7 +249,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                                                (
                                                                                                                 match v with 
                                                                                                                 | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int m) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
-                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GT (s_lp, (Simplex.rat_of_int_pair (big_int_of_int m) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (m + 1)) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                )
                                                                                                 )
                                                                         )
@@ -257,7 +261,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GT (s_lp, (Simplex.rat_of_int_pair (big_int_of_int m) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (m + 1)) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                 | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int m) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                )
                                                                                                 )
@@ -270,10 +274,15 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                                      match ((is_in_varlist newlist x), v) with 
                                                                                                         | (-1, true) -> to_simplex_format (Assignment (xs)) (newlist @ [(x, newcount + 1)]) (newcount + 1) (result @ [Simplex.LEQPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (newcount + 1)))))])
                                                                                                                                                                                                            (cs @ [(c, v, d, dl)])
-                                                                                                        | (-1, false) -> to_simplex_format (Assignment (xs)) (newlist @ [(x, newcount + 1)]) (newcount + 1) (result @ [Simplex.GTPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (newcount + 1)))))])
-                                                                                                                                                                                                            (cs @ [(c, v, d, dl)])        
+                                                                                                        | (_, false) -> ( 
+                                                                                                                        match (transform_constraint (Prod (p), Sum ([(Var (x)); (Num (1))]))) with 
+                                                                                                                                | (Num (n), sums) -> (
+                                                                                                                                                    match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                                                        | (s_lp, newlist, newcount) -> 
+                                                                                                                                                            to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                                                    )
+                                                                                                                        )      
                                                                                                         | (m, true) -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))))]) (cs @ [(c, v, d, dl)])
-                                                                                                        | (m, false) -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GTPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))))]) (cs @ [(c, v, d, dl)])
                                                                                                     )
                                                                            )
                                                         | (Var (x), Prod (p)) ->
@@ -282,12 +291,17 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                 | (p_lp, newlist, newcount) -> 
                                                                                                     (
                                                                                                      match ((is_in_varlist newlist x), v) with 
-                                                                                                        | (-1, true) -> to_simplex_format (Assignment (xs)) (newlist @ [(x, newcount + 1)]) (newcount + 1) (result @ [Simplex.GTPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (newcount + 1)))))])
+                                                                                                        | (-1, true) -> to_simplex_format (Assignment (xs)) (newlist @ [(x, newcount + 1)]) (newcount + 1) (result @ [Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (newcount + 1)))), p_lp)])
                                                                                                                                                                                                            (cs @ [(c, v, d, dl)]) 
-                                                                                                        | (-1, false) -> to_simplex_format (Assignment (xs)) (newlist @ [(x, newcount + 1)]) (newcount + 1) (result @ [Simplex.LEQPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (newcount + 1)))))])
-                                                                                                                                                                                                            (cs @ [(c, v, d, dl)])
-                                                                                                        | (m, true) -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GTPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))))]) (cs @ [(c, v, d, dl)])
-                                                                                                        | (m, false) -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))))]) (cs @ [(c, v, d, dl)]) 
+                                                                                                        | (_, false) -> ( 
+                                                                                                                        match (transform_constraint (Var (x), Sum ([(Prod (p)); (Num (1))]))) with 
+                                                                                                                                | (Num (n), sums) -> (
+                                                                                                                                                    match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                                                        | (p_lp, newlist, newcount) -> 
+                                                                                                                                                            to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                                                    )
+                                                                                                                        )  
+                                                                                                        | (m, true) -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), p_lp)]) (cs @ [(c, v, d, dl)]) 
                                                                                                     )
                                                                            )
                                                         | (Prod (p), Num (n)) ->
@@ -296,7 +310,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                 | (p_lp, newlist, newcount) -> (
                                                                                                                 match v with 
                                                                                                                 | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])   
-                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GT (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])            
+                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])            
                                                                                                                )        
                                                                            )
                                                         | (Num (n), Prod (p)) ->
@@ -304,7 +318,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                             match (op_to_simplex_format (Prod (p)) varlist varcount) with
                                                                                 | (p_lp, newlist, newcount) -> (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GT (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                 | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])         
                                                                                                                )  
                                                                            )
@@ -317,7 +331,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                                                (
                                                                                                                 match v with 
                                                                                                                 | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
-                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GT (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                )
                                                                                                 )
                                                                         )
@@ -329,7 +343,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GT (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                 | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                )
                                                                                                 )
@@ -343,22 +357,29 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                                                (
                                                                                                                 match v with 
                                                                                                                 | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
-                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GT (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
                                                                                                                )
                                                                                                 )
                                                                         )
                                                         | (Prod (p1), Prod (p2)) ->
                                                                            (
-                                                                            match (op_to_simplex_format (Prod (p1)) varlist varcount) with
-                                                                                | (p1_lp, newlist_p1, newcount_p1) -> 
-                                                                                    (
-                                                                                     match (op_to_simplex_format (Prod (p2)) newlist_p1 newcount_p1) with
-                                                                                        | (p2_lp, newlist, newcount) -> (
-                                                                                                                         match v with
-                                                                                                                            | true -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQPP (p1_lp, p2_lp)]) (cs @ [(c, v, d, dl)])
-                                                                                                                            | false -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GTPP (p1_lp, p2_lp)]) (cs @ [(c, v, d, dl)])
-                                                                                                                        )
-                                                                                    )
+                                                                            match v with 
+                                                                             | true -> (
+                                                                                        match (op_to_simplex_format (Prod (p1)) varlist varcount) with
+                                                                                         | (p1_lp, newlist_p1, newcount_p1) -> 
+                                                                                                (
+                                                                                                 match (op_to_simplex_format (Prod (p2)) newlist_p1 newcount_p1) with
+                                                                                                    | (p2_lp, newlist, newcount) -> to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.LEQPP (p1_lp, p2_lp)]) (cs @ [(c, v, d, dl)])
+                                                                                                )
+                                                                                       )
+                                                                             | false -> ( 
+                                                                                         match (transform_constraint (Prod (p1), Sum ([(Prod (p2)); (Num (1))]))) with 
+                                                                                            | (Num (n), sums) -> (
+                                                                                                                  match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                    | (p_lp, newlist, newcount) -> 
+                                                                                                                        to_simplex_format (Assignment (xs)) newlist newcount (result @ [Simplex.GEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)))]) (cs @ [(c, v, d, dl)])
+                                                                                                                 )
+                                                                                        )  
                                                                            )     
                                                         | (Num (n1), Num (n2)) -> (
                                                                                    match (compare n1 n2) with
