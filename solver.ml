@@ -900,8 +900,8 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
         | true -> (
                    match (Util.to_simplex_format_init assignment) with 
                     | (sf_assignment, cs) -> ( 
-                                              match Simplex.simplex sf_assignment with
-                                                | Some (x) -> (*Printing.print_assignment assignment;*) true
+                                              Printing.print_assignment assignment; printf "\n\n"; Printing.print_simplex_constraints sf_assignment; match Simplex.simplex sf_assignment with
+                                                | Some (x) -> true
                                                 | None -> (
                                                            match cs with 
                                                             | Assignment ([z]) -> (
@@ -926,8 +926,8 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
                                                       | [] -> (
                                                                match (Util.to_simplex_format_init n_assignment) with 
                                                                     | (sf_assignment, cs) -> ( 
-                                                                                            match Simplex.simplex sf_assignment with
-                                                                                                | Some (x) -> (*Printing.print_assignment assignment; printf "\n\n";*) dpll_twl_rec n_assignment formula n_map literals new_dl
+                                                                                            Printing.print_assignment n_assignment; printf "\n\n"; Printing.print_simplex_constraints sf_assignment; match Simplex.simplex sf_assignment with
+                                                                                                | Some (x) -> dpll_twl_rec n_assignment formula n_map literals new_dl
                                                                                                 | None -> (
                                                                                                             match cs with 
                                                                                                                 | Assignment ([z]) -> (
