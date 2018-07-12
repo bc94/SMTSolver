@@ -3,13 +3,17 @@ module Simplex : sig
   type nat = Nat of Big_int.big_int
   type rat = Frct of (int * int)
   type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list
-  type ('a, 'b) mapping
   type linear_poly = LinearPoly of (nat, rat) fmap
   type constrainta = LT of linear_poly * rat | GT of linear_poly * rat |
     LEQ of linear_poly * rat | GEQ of linear_poly * rat |
     EQ of linear_poly * rat | LTPP of linear_poly * linear_poly |
     GTPP of linear_poly * linear_poly | LEQPP of linear_poly * linear_poly |
     GEQPP of linear_poly * linear_poly | EQPP of linear_poly * linear_poly
+  type color = R | B
+  type ('a, 'b) rbta = Empty |
+    Branch of color * ('a, 'b) rbta * 'a * 'b * ('a, 'b) rbta
+  type ('b, 'a) rbt = RBT of ('b, 'a) rbta
+  type ('a, 'b) mapping = Mapping of ('a, 'b) rbt
   val integer_of_int : int -> Big_int.big_int
   val nat_of_integer : Big_int.big_int -> nat
   val simplex : constrainta list -> (nat, rat) mapping option
