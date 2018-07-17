@@ -1,3 +1,5 @@
+module Index_Map = Map.Make(String);;
+
 open Types
 open List
 
@@ -80,15 +82,125 @@ let rec transform_elem (e : element) (n_aux : int) (n_last : int) : (element lis
         | Atom (x) -> ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom x])] @ 
                        [Disjunction ([Not (Atom x); Atom (AuxVar n_aux)])],
                        n_last)
-        | _ -> failwith "[Invalid formula]: transform_elem";;
+        | _ -> failwith "[Invalid argument]: transform_elem";;
 
 let tseitin_transformation_n f n_aux n_last = 
     match f with
         | Formula (x) -> (
                           match (transform_elem x n_aux n_last) with
                             | (xs, n) -> Formula (Conjunction ([Atom (AuxVar n_aux)] @ xs))
-                            | _ -> failwith "[Invalid formula]: tseitin_transformation_n"
+                            | _ -> failwith "[Invalid argument]: tseitin_transformation_n"
                          )
         | _ -> failwith "[Invalid formula]: tseitin_transformation_n";;
 
 let tseitin_transformation f = tseitin_transformation_n f 0 0;;
+
+
+(* A version of the tseitin transformation that additionally extracts all constraints *)
+(* in order to construct the tableau for the incremental simplex procedure *)
+
+let rec transform_elem_inc e cs i_map i n_aux n_last =
+    match e with
+        | Not (x) -> (
+                      match (transform_elem_inc x cs i_map i (n_last + 1) (n_last + 1)) with 
+                        | (xs, n, cs_new, i_map_new, i_new) -> ([Disjunction ([(Atom (AuxVar n_aux)); (Atom (AuxVar (n_last + 1)))])] @ 
+                                                                [Disjunction ([Not (Atom (AuxVar n_aux)); Not (Atom (AuxVar (n_last + 1)))])] @
+                                                                xs,
+                                                                n,
+                                                                cs_new,
+                                                                i_map_new,
+                                                                i_new)
+                        | _ -> failwith "[Invalid formula]: transform_elem"
+                     )                  
+        | Conjunction ([]) -> ([], n_last, cs, i_map, i)
+        | Conjunction (xs) -> (
+                               match (length xs) with
+                                | 2 -> (
+                                        match (transform_elem_inc (hd (remove_last xs)) cs i_map i (n_last + 1) (n_last + 2)) with
+                                            | (ys, n1, cs_n, i_map_n, i_n) -> (
+                                                              match (transform_elem_inc (hd (rev xs)) cs_n i_map_n i_n (n_last + 2) (n1)) with 
+                                                                | (zs, n2, cs_new, i_map_new, i_new) -> ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1))])] @ 
+                                                                                                         [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 2))])] @ 
+                                                                                                         [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1))); Not (Atom (AuxVar (n_last + 2)))])] @ 
+                                                                                                         ys @
+                                                                                                         zs,
+                                                                                                         n2,
+                                                                                                         cs_new,
+                                                                                                         i_map_new,
+                                                                                                         i_new)
+                                                             )
+                                        )
+                                | 1 -> (transform_elem_inc (hd xs) cs i_map i n_aux n_last)
+                                | _ -> (
+                                        match (transform_elem_inc (Conjunction (remove_last xs)) cs i_map i (n_last + 1) (n_last + 2)) with
+                                            | (ys, n1, cs_n, i_map_n, i_n) -> 
+                                                        (
+                                                         match (transform_elem_inc (hd (rev xs)) cs_n i_map_n i_n (n_last + 2) (n1)) with 
+                                                            | (zs, n2, cs_new, i_map_new, i_new) -> 
+                                                                ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1))])] @ 
+                                                                 [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 2))])] @ 
+                                                                 [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1))); Not (Atom (AuxVar (n_last + 2)))])] @ 
+                                                                 ys @
+                                                                 zs,
+                                                                 n2,
+                                                                 cs_new,
+                                                                 i_map_new,
+                                                                 i_new)
+                                                        )
+                                       )
+                              )
+        | Disjunction ([]) -> ([], n_last, cs, i_map, i)      
+        | Disjunction (xs) -> (
+                               match (length xs) with 
+                                | 2 -> (
+                                        match (transform_elem_inc (hd (remove_last xs)) cs i_map i (n_last + 1) (n_last + 2)) with
+                                            | (ys, n1, cs_n, i_map_n, i_n) -> (
+                                                           match (transform_elem_inc (hd (rev xs)) cs_n i_map_n i_n (n_last + 2) (n1)) with 
+                                                            | (zs, n2, cs_new, i_map_new, i_new) -> 
+                                                                ([Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1)))])] @ 
+                                                                 [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 2)))])] @ 
+                                                                 [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1)); Atom (AuxVar (n_last + 2))])] @ 
+                                                                 ys @
+                                                                 zs,
+                                                                 n2,
+                                                                 cs_new,
+                                                                 i_map_new,
+                                                                 i_new)
+                                                          )
+                                       )
+                                | 1 -> (transform_elem_inc (hd xs) cs i_map i n_aux n_last)
+                                | _ -> (
+                                        match (transform_elem_inc (Disjunction (remove_last xs)) cs i_map i (n_last + 1) (n_last + 2)) with
+                                            | (ys, n1, cs_n, i_map_n, i_n) -> (
+                                                        match (transform_elem_inc (hd (rev xs)) cs_n i_map_n i_n (n_last + 2) (n1)) with 
+                                                            | (zs, n2, cs_new, i_map_new, i_new) -> 
+                                                                ([Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1)))])] @ 
+                                                                 [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 2)))])] @ 
+                                                                 [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1)); Atom (AuxVar (n_last + 2))])] @ 
+                                                                 ys @
+                                                                 zs,
+                                                                 n2,
+                                                                 cs_new,
+                                                                 i_map_new,
+                                                                 i_new)
+                                                        )
+                                       )
+                              )
+        | Atom (x) -> ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom x])] @ 
+                       [Disjunction ([Not (Atom x); Atom (AuxVar n_aux)])],
+                       n_last,
+                       (cs @ [(x, true, false, 0)] @ [(x, false, false, 0)]),
+                       (Index_Map.add ("-" ^ Printing.print_constraint_n x) (i + 1) (Index_Map.add (Printing.print_constraint_n x) i (i_map))),
+                       i + 2)
+        | _ -> failwith "[Invalid argument]: transform_elem_inc";;
+
+let tseitin_transformation_inc_n f n_aux n_last = 
+    match f with
+        | Formula (x) -> (
+                          match (transform_elem_inc x [] Index_Map.empty 0 n_aux n_last) with
+                            | (xs, n, cs, i_map, i) -> (Formula (Conjunction ([Atom (AuxVar n_aux)] @ xs)), Assignment (cs), i_map)
+                            | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n"
+                         )
+        | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n";;
+
+let tseitin_transformation_inc f = tseitin_transformation_inc_n f 0 0;;

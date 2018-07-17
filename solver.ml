@@ -1005,6 +1005,118 @@ and restart_twl_unit assignment formula f_map literals unit_literal lit_val = le
 
 (**********************************************)
 
+(****************************************************************************************************)
+(* Two-watched-literal implementation using incremental simplex, unsat cores and theory propagation *)
+(****************************************************************************************************)
+
+let rec dpll_twl_inc_rec assignment formula f_map i_map dl = 
+    (*Printing.print_assignment assignment; printf "\n\n";*) match model_found_twl assignment formula with
+        | true -> (
+                   match (Util.to_simplex_format_inc_init assignment i_map) with 
+                    | (sf_assignment, cs) -> ( 
+                                              (*Printing.print_assignment assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*) 
+                                              match Simplex.simplex sf_assignment with
+                                                | Some (x) -> (
+                                                               match x with
+                                                                | Mapping (RBT (Empty)) -> printf "Maybe\n"; true
+                                                                | Mapping (RBT (_)) -> true
+                                                              )
+                                                | None -> (
+                                                           match cs with 
+                                                            | Assignment ([z]) -> (
+                                                                                   match z with
+                                                                                    | (y, true, d, l) -> restart_twl_inc_unit assignment formula f_map i_map y false
+                                                                                    | (y, false, d, l) -> restart_twl_inc_unit assignment formula f_map i_map y true
+                                                                                  )
+                                                            | Assignment (zs) -> let ys = (Disjunction (transform_to_neg_clause cs)) in 
+                                                                                    printf "restart\n\n"; restart_twl_inc assignment (learn formula ys) (add_clause_to_map f_map ys) i_map
+                                                          )
+                                             )
+                  )
+        | false -> let (new_assignment, new_map, new_dl, prop, conf) = decision_twl_inc formula assignment f_map i_map dl in 
+                    (
+                     match conf with 
+                        | [] -> (
+                                 match prop with
+                                    | [] -> dpll_twl_inc_rec new_assignment formula new_map i_map new_dl
+                                    | x :: xs -> let (n_assignment, n_map, n_conf) = unit_propagation_twl new_assignment new_map prop new_dl in 
+                                                    (
+                                                     match n_conf with
+                                                      | [] -> (
+                                                               match (Util.to_simplex_format_inc_init n_assignment i_map) with 
+                                                                    | (sf_assignment, cs) -> ( 
+                                                                                            (*Printing.print_assignment n_assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*)
+                                                                                             match Simplex.simplex sf_assignment with
+                                                                                                | Some (x) -> dpll_twl_inc_rec n_assignment formula n_map i_map new_dl
+                                                                                                | None -> (
+                                                                                                            match cs with 
+                                                                                                                | Assignment ([z]) -> (
+                                                                                                                                       match z with
+                                                                                                                                        | (y, true, d, l) -> restart_twl_inc_unit n_assignment formula f_map i_map y false
+                                                                                                                                        | (y, false, d, l) -> restart_twl_inc_unit n_assignment formula f_map i_map y true
+                                                                                                                                      )
+                                                                                                                | Assignment (zs) -> let ys = (Disjunction (transform_to_neg_clause cs)) in 
+                                                                                                                                        printf "restart\n\n"; restart_inc_twl n_assignment (learn formula ys) (add_clause_to_map f_map ys) i_map
+                                                                                                          )
+                                                                                            )
+                                                              )
+                                                      | x :: xs -> (
+                                                                    let (ys, bj_clause) = (backjump_twl n_assignment formula (hd n_conf)) in 
+                                                                        (
+                                                                         printf "backjump\n\n"; match (bj_clause, (conflict_exists ys formula)) with
+                                                                            | (_, true) -> false
+                                                                            | (Disjunction ([]), false) -> dpll_twl_inc_rec ys formula new_map i_map (get_current_decision_level ys)
+                                                                            | (Disjunction ([z]), false) -> dpll_twl_inc_rec ys formula new_map i_map (get_current_decision_level ys)
+                                                                            | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_rec ys formula_l (add_clause_to_map new_map bj_clause) i_map (get_current_decision_level ys)
+                                                                        )
+                                                                   )
+                                                    )
+                                )
+                        | x :: xs -> (
+                                      let (ys, bj_clause) = (backjump_twl new_assignment formula (hd conf)) in 
+                                        (
+                                         printf "backjump\n\n"; match (bj_clause, (conflict_exists ys formula)) with
+                                            | (_, true) -> false
+                                            | (Disjunction ([]), false) -> dpll_twl_inc_rec ys formula new_map i_map (get_current_decision_level ys)
+                                            | (Disjunction ([z]), false) -> dpll_twl_inc_rec ys formula new_map i_map (get_current_decision_level ys)
+                                            | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_rec ys formula_l (add_clause_to_map new_map bj_clause) i_map (get_current_decision_level ys)
+                                        )
+                                     )
+                                      
+                    )
+
+and dpll_twl_inc formula i_map = let (new_formula, new_assignment, prop) = preprocess_unit_clauses (Assignment ([])) formula in 
+                        (*Printing.print_formula new_formula; printf "\n\n";*) let (f_map, literals) = construct_map new_formula in 
+                            let (n_assignment, n_map, conf) = unit_propagation_twl new_assignment f_map prop 0 in 
+                                (
+                                 match conf with
+                                    | [] -> dpll_twl_inc_rec n_assignment new_formula n_map i_map 0
+                                    | x :: xs -> false
+                                )
+
+and restart_twl_inc assignment formula f_map i_map = let (new_formula, new_assignment, prop) = preprocess_unit_clauses (preserve_unit_assignments assignment) formula in 
+                                                        let (n_assignment, n_map, conf) = unit_propagation_twl new_assignment f_map prop 0 in 
+                                                            (
+                                                             match conf with
+                                                                | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) dpll_twl_inc_rec n_assignment new_formula n_map i_map 0
+                                                                | x :: xs -> false
+                                                            )
+                                                
+and restart_twl_inc_unit assignment formula f_map i_map unit_literal lit_val = let (new_formula, new_assignment, prop) = preprocess_unit_clauses (preserve_unit_assignments assignment) formula in
+                                                                                            let (n_assignment, n_map, conf) = let Assignment (xs) = new_assignment in unit_propagation_twl (Assignment (xs @ [(unit_literal, lit_val, false, 0)])) f_map prop 0 in 
+                                                                                                (
+                                                                                                match conf with
+                                                                                                    | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) dpll_twl_inc_rec n_assignment new_formula n_map i_map 0
+                                                                                                    | x :: xs -> false
+                                                                                                );;
+
+let sat_inc formula i_map =
+    match (dpll_twl_inc formula i_map) with
+        | true -> printf "SAT\n"
+        | false -> printf "UNSAT\n";; 
+
+(****************************************************************************************************)
+
 let sat formula = 
     match (dpll_twl formula) with
         | true -> printf "SAT\n"
