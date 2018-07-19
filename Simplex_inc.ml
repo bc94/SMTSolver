@@ -5,12 +5,14 @@ module Simplex_inc : sig
   type qDelta
   type 'a lrv
   type 'a atom
-  type ('a, 'b) sum
+  type ('a, 'b) sum = Inl of 'a | Inr of 'b
   type linear_poly
   type ('a, 'b) mapping
   type ('a, 'b) state
   type constrainta
   type 'a ns_constraint
+  let equal_nat = ({equal = equal_nata} : nat equal)
+  let linorder_nat = ({order_linorder = order_nat} : nat linorder)
   val init_simplex :
     'a linorder ->
       ('a * constrainta) list ->
