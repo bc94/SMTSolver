@@ -1021,6 +1021,18 @@ let rec convert_unsat_core_rec unsat_core inv_map result =
 
 let convert_unsat_core unsat_core = convert_unsat_core_rec unsat_core inv_map [];;
 
+let rec preprocess_unit_clauses_inc_rec formula new_formula new_assignment prop = (* TODO *)
+    match formula with 
+        | Formula (Conjunction ([])) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), prop)
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match x with 
+                                                | Disjunction (ys) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) (new_formula @ [x]) new_assignment prop
+                                                | Atom (y) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (prop @ [x])
+                                                | Not (Atom (y)) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (prop @ [x])
+                                             );;
+
+let preprocess_unit_clauses_inc (Assignment (assignment)) formula = (* TODO *)preprocess_unit_clauses_rec formula [] assignment [];;
+
 let rec decision_twl_inc formula assignment f_map s_state i_map inv_map dl =
     let Formula (Conjunction (cs)) = formula in 
      match contains_unassigned_literal assignment (hd cs) with
@@ -1104,40 +1116,39 @@ let rec dpll_twl_inc_rec assignment formula f_map s_state checkpoints i_map inv_
         | true -> (
                    (*Printing.print_assignment assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*) 
                    match Simplex_inc.check_simplex Simplex_inc.equal_nat Simplex_inc.linorder_nat s_state with
-                    | Simplex_inc.Inl (unsat_core) -> let ys = (Disjunction (transform_to_neg_clause (convert_unsat_core unsat_core inv_map))) in 
-                                                        printf "restart\n\n"; restart_twl_inc assignment (learn formula ys) (add_clause_to_map f_map ys) s_state i_map inv_map
+                    | Simplex_inc.Inl (unsat_core) -> (* TODO: reset state when calling restart using backtrack_simplex *)
+                                                     let ys = (Disjunction (transform_to_neg_clause (convert_unsat_core unsat_core inv_map))) in 
+                                                        printf "restart\n\n";
+                                                        restart_twl_inc assignment (learn formula ys) (add_clause_to_map f_map ys) s_state [hd (checkpoints)] i_map inv_map
                     | Simplex_inc.Inr (n_state) -> (* According to my understanding this is sufficient info to determine that formula is SAT *)
                                                     true
                   )
-        | false -> let (new_assignment, new_map, new_dl, new_state, prop, conf) = decision_twl_inc formula assignment f_map s_state i_map inv_map dl in 
+        | false -> let new_cps = checkpoints @ [(dl, Simplex_inc.checkpoint_simplex s_state)] in(* TODO: checkpoint_simplex *)
+                    let (new_assignment, new_map, new_dl, new_state, prop, conf) = decision_twl_inc formula assignment f_map s_state i_map inv_map dl in 
                     (
                      match conf with 
                         | [] -> (
                                  match prop with
-                                    | [] -> dpll_twl_inc_rec new_assignment formula new_map new_state i_map inv_map new_dl
-                                    (* TODO: asserts for every atom in unit_propagation and check before the recursive call *)
+                                    | [] -> dpll_twl_inc_rec new_assignment formula new_map new_state new_cps i_map inv_map new_dl
                                     | x :: xs -> let (n_assignment, n_map, n_state n_conf) = unit_propagation_twl_inc new_assignment new_map new_state i_map inv_map prop new_dl in 
                                                     (
                                                      match n_conf with
                                                       | [] -> (
-                                                               (* TODO: check_simplex *)
-                                                               match (Util.to_simplex_format_inc_init n_assignment i_map) with 
-                                                                    | (sf_assignment, cs) -> ( 
-                                                                                            (*Printing.print_assignment n_assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*)
-                                                                                             match Simplex.simplex sf_assignment with
-                                                                                                | Some (x) -> dpll_twl_inc_rec n_assignment formula n_map s_state i_map new_dl
-                                                                                                | None -> (
-                                                                                                            match cs with 
-                                                                                                                | Assignment ([z]) -> (
-                                                                                                                                       match z with
-                                                                                                                                        | (y, true, d, l) -> restart_twl_inc_unit n_assignment formula f_map s_state i_map y false
-                                                                                                                                        | (y, false, d, l) -> restart_twl_inc_unit n_assignment formula f_map s_state i_map y true
-                                                                                                                                      )
-                                                                                                                | Assignment (zs) -> let ys = (Disjunction (transform_to_neg_clause cs)) in 
-                                                                                                                                        printf "restart\n\n"; restart_inc_twl n_assignment (learn formula ys) (add_clause_to_map f_map ys) s_state i_map
-                                                                                                          )
-                                                                                            )
-                                                              )
+                                                                match Simplex_inc.check_simplex Simplex_inc.equal_nat Simplex_inc.linorder_nat n_state with
+                                                                    | Inl (unsat_core) -> (* TODO: reset state when calling restart using backtrack_simplex *)
+                                                                                          (
+                                                                                           match length unsat_core with 
+                                                                                            | 0 -> failwith "[Invalid argument] unsat core empty"
+                                                                                            | 1 -> (
+                                                                                                    match (hd (convert_unsat_core unsat_core inv_map)) with
+                                                                                                        | Atom (y) -> restart_twl_inc_unit n_assignment formula f_map s_state [hd (checkpoints)] i_map inv_map y false
+                                                                                                        | Not (Atom (y)) -> restart_twl_inc_unit n_assignment formula f_map s_state [hd (checkpoints)] i_map inv_map y true
+                                                                                                   )
+                                                                                            | _ -> let ys = (Disjunction (transform_to_neg_clause (convert_unsat_core unsat_core inv_map))) in 
+                                                                                                    printf "restart\n\n"; restart_twl_inc assignment (learn formula ys) (add_clause_to_map n_map ys) s_state [hd (checkpoints)] i_map inv_map
+                                                                                          )
+                                                                    | Inr (state) -> dpll_twl_inc_rec n_assignment formula n_map state new_cps i_map inv_map new_dl
+                                                               )
                                                       | x :: xs -> (
                                                                     (* TODO: backjump using simplex checkpoints *)
                                                                     let (ys, bj_clause) = (backjump_twl n_assignment formula (hd n_conf)) in 
@@ -1152,6 +1163,7 @@ let rec dpll_twl_inc_rec assignment formula f_map s_state checkpoints i_map inv_
                                                     )
                                 )
                         | x :: xs -> (
+                                     (* TODO: backjump using simplex checkpoints *)
                                       let (ys, bj_clause) = (backjump_twl new_assignment formula (hd conf)) in 
                                         (
                                          printf "backjump\n\n"; match (bj_clause, (conflict_exists ys formula)) with
@@ -1164,34 +1176,35 @@ let rec dpll_twl_inc_rec assignment formula f_map s_state checkpoints i_map inv_
                                       
                     )
 
-and dpll_twl_inc formula i_map inv_map s_state = let (new_formula, new_assignment, prop) = preprocess_unit_clauses (Assignment ([])) formula in 
+and dpll_twl_inc formula i_map inv_map s_state checkpoints = let (new_formula, new_assignment, new_state, prop) = preprocess_unit_clauses_inc (Assignment ([])) formula s_state i_map inv_map in 
                         (*Printing.print_formula new_formula; printf "\n\n";*) let (f_map, literals) = construct_map new_formula in 
-                            let (n_assignment, n_map, conf) = unit_propagation_twl new_assignment f_map prop 0 in 
+                            let (n_assignment, n_map, n_state, conf) = unit_propagation_twl_inc new_assignment f_map new_state i_map inv_map prop 0 in 
                                 (
                                  match conf with
-                                    | [] -> dpll_twl_inc_rec n_assignment new_formula n_map s_state [] i_map inv_map 0
+                                    | [] -> dpll_twl_inc_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0
                                     | x :: xs -> false
                                 )
 
-and restart_twl_inc assignment formula f_map s_state i_map inv_map = let (new_formula, new_assignment, prop) = preprocess_unit_clauses (preserve_unit_assignments assignment) formula in 
-                                                                let (n_assignment, n_map, conf) = unit_propagation_twl new_assignment f_map prop 0 in 
+and restart_twl_inc assignment formula f_map s_state checkpoints i_map inv_map = let (new_formula, new_assignment, new_state, prop) = preprocess_unit_clauses_inc (preserve_unit_assignments assignment) formula s_state i_map inv_map in 
+                                                                let (n_assignment, n_map, n_state, conf) = unit_propagation_twl_inc new_assignment f_map new_state i_map inv_map prop 0 in 
                                                                     (
                                                                     match conf with
-                                                                        | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) dpll_twl_inc_rec n_assignment new_formula n_map s_state [] i_map inv_map 0
+                                                                        | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) dpll_twl_inc_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0
                                                                         | x :: xs -> false
                                                                     )
                                                 
-and restart_twl_inc_unit assignment formula f_map s_state i_map inv_map unit_literal lit_val = let (new_formula, new_assignment, prop) = preprocess_unit_clauses (preserve_unit_assignments assignment) formula in
-                                                                                            let (n_assignment, n_map, conf) = let Assignment (xs) = new_assignment in unit_propagation_twl (Assignment (xs @ [(unit_literal, lit_val, false, 0)])) f_map prop 0 in 
+(* TODO: check if correct when everything else is done *)
+and restart_twl_inc_unit assignment formula f_map s_state checkpoints i_map inv_map unit_literal lit_val = let (new_formula, new_assignment, new_state, prop) = preprocess_unit_clauses_inc (preserve_unit_assignments assignment) formula s_state i_map inv_map in
+                                                                                            let (n_assignment, n_map, n_state, conf) = let Assignment (xs) = new_assignment in unit_propagation_twl_inc (Assignment (xs @ [(unit_literal, lit_val, false, 0)])) f_map new_state i_map inv_map prop 0 in 
                                                                                                 (
                                                                                                 match conf with
-                                                                                                    | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) dpll_twl_inc_rec n_assignment new_formula n_map s_state [] i_map inv_map  0
+                                                                                                    | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) dpll_twl_inc_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map  0
                                                                                                     | x :: xs -> false
                                                                                                 );;
 
 let sat_inc formula cs i_map inv_map =
     let state = Simplex_inc.init_simplex Simplex_inc.linorder_nat (Util.to_simplex_format_inc_init cs i_map) in
-    match (dpll_twl_inc formula i_map inv_map state) with
+    match (dpll_twl_inc formula i_map inv_map state [(-1, Simplex_inc.checkpoint_simplex state)]) with
         | true -> printf "SAT\n"
         | false -> printf "UNSAT\n";; 
 
