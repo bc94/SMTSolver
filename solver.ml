@@ -1021,17 +1021,33 @@ let rec convert_unsat_core_rec unsat_core inv_map result =
 
 let convert_unsat_core unsat_core = convert_unsat_core_rec unsat_core inv_map [];;
 
-let rec preprocess_unit_clauses_inc_rec formula new_formula new_assignment prop = (* TODO *)
+let rec preprocess_unit_clauses_inc_rec formula new_formula new_assignment prop conf s_state i_map inv_map =
     match formula with 
-        | Formula (Conjunction ([])) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), prop)
+        | Formula (Conjunction ([])) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), prop, conf, s_state)
         | Formula (Conjunction (x :: xs)) -> (
                                               match x with 
-                                                | Disjunction (ys) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) (new_formula @ [x]) new_assignment prop
-                                                | Atom (y) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (prop @ [x])
-                                                | Not (Atom (y)) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (prop @ [x])
+                                                | Disjunction (ys) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) (new_formula @ [x]) new_assignment prop conf s_state i_map inv_map
+                                                | Atom (y) -> if is_proper_constraint y 
+                                                              then (
+                                                                    match Simplex_inc.assert_simplex Simplex_inc.equal_nat Simplex_inc.lrv_QDelta Simplex_inc.equal_QDelta (Tseitin.Index_Map.find (Printing.print_constraint_n y) i_map) s_state with
+                                                                        | Inl (unsat_core) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), prop, true, s_state)
+                                                                        | Inr (n_state) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (prop @ [x]) conf n_state i_map inv_map
+                                                                   )
+                                                              else (
+                                                                    preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (prop @ [x]) conf s_state i_map inv_map
+                                                                   )
+                                                | Not (Atom (y)) -> if is_proper_constraint y 
+                                                                    then (
+                                                                            match Simplex_inc.assert_simplex Simplex_inc.equal_nat Simplex_inc.lrv_QDelta Simplex_inc.equal_QDelta (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n y) i_map) s_state with
+                                                                                | Inl (unsat_core) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), prop, true, s_state)
+                                                                                | Inr (n_state) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (prop @ [x]) conf n_state i_map inv_map
+                                                                        )
+                                                                    else (
+                                                                            preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (prop @ [x]) conf s_state i_map inv_map
+                                                                        )
                                              );;
 
-let preprocess_unit_clauses_inc (Assignment (assignment)) formula = (* TODO *)preprocess_unit_clauses_rec formula [] assignment [];;
+let preprocess_unit_clauses_inc (Assignment (assignment)) formula s_state i_map inv_map = preprocess_unit_clauses_rec formula [] assignment [] false s_state i_map inv_map;;
 
 let rec decision_twl_inc formula assignment f_map s_state i_map inv_map dl =
     let Formula (Conjunction (cs)) = formula in 
@@ -1176,31 +1192,49 @@ let rec dpll_twl_inc_rec assignment formula f_map s_state checkpoints i_map inv_
                                       
                     )
 
-and dpll_twl_inc formula i_map inv_map s_state checkpoints = let (new_formula, new_assignment, new_state, prop) = preprocess_unit_clauses_inc (Assignment ([])) formula s_state i_map inv_map in 
-                        (*Printing.print_formula new_formula; printf "\n\n";*) let (f_map, literals) = construct_map new_formula in 
-                            let (n_assignment, n_map, n_state, conf) = unit_propagation_twl_inc new_assignment f_map new_state i_map inv_map prop 0 in 
-                                (
-                                 match conf with
-                                    | [] -> dpll_twl_inc_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0
-                                    | x :: xs -> false
-                                )
+and dpll_twl_inc formula i_map inv_map s_state checkpoints = 
+                let (new_formula, new_assignment, new_state, conf_unit, prop) = preprocess_unit_clauses_inc (Assignment ([])) formula s_state i_map inv_map in 
+                        (*Printing.print_formula new_formula; printf "\n\n";*) 
+                        if conf_unit 
+                        then false
+                        else (
+                              let (f_map, literals) = construct_map new_formula in 
+                                let (n_assignment, n_map, n_state, conf) = unit_propagation_twl_inc new_assignment f_map new_state i_map inv_map prop 0 in 
+                                    (
+                                     match conf with
+                                        | [] -> dpll_twl_inc_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0
+                                        | x :: xs -> false
+                                    )
+                            )
 
-and restart_twl_inc assignment formula f_map s_state checkpoints i_map inv_map = let (new_formula, new_assignment, new_state, prop) = preprocess_unit_clauses_inc (preserve_unit_assignments assignment) formula s_state i_map inv_map in 
-                                                                let (n_assignment, n_map, n_state, conf) = unit_propagation_twl_inc new_assignment f_map new_state i_map inv_map prop 0 in 
-                                                                    (
-                                                                    match conf with
-                                                                        | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) dpll_twl_inc_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0
-                                                                        | x :: xs -> false
-                                                                    )
+and restart_twl_inc assignment formula f_map s_state checkpoints i_map inv_map = 
+                        let (new_formula, new_assignment, new_state, conf_unit, prop) = preprocess_unit_clauses_inc (preserve_unit_assignments assignment) formula s_state i_map inv_map in 
+                            if conf_unit
+                            then false
+                            else (
+                                  let (n_assignment, n_map, n_state, conf) = unit_propagation_twl_inc new_assignment f_map new_state i_map inv_map prop 0 in 
+                                    (
+                                     match conf with
+                                        | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) 
+                                            dpll_twl_inc_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0
+                                        | x :: xs -> false
+                                    )
+                                 )
                                                 
 (* TODO: check if correct when everything else is done *)
-and restart_twl_inc_unit assignment formula f_map s_state checkpoints i_map inv_map unit_literal lit_val = let (new_formula, new_assignment, new_state, prop) = preprocess_unit_clauses_inc (preserve_unit_assignments assignment) formula s_state i_map inv_map in
-                                                                                            let (n_assignment, n_map, n_state, conf) = let Assignment (xs) = new_assignment in unit_propagation_twl_inc (Assignment (xs @ [(unit_literal, lit_val, false, 0)])) f_map new_state i_map inv_map prop 0 in 
-                                                                                                (
-                                                                                                match conf with
-                                                                                                    | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) dpll_twl_inc_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map  0
-                                                                                                    | x :: xs -> false
-                                                                                                );;
+and restart_twl_inc_unit assignment formula f_map s_state checkpoints i_map inv_map unit_literal lit_val = 
+                        let (new_formula, new_assignment, new_state, conf_unit, prop) = preprocess_unit_clauses_inc (preserve_unit_assignments assignment) formula s_state i_map inv_map in
+                            if conf_unit
+                            then false
+                            else (
+                                  let (n_assignment, n_map, n_state, conf) = let Assignment (xs) = new_assignment in unit_propagation_twl_inc (Assignment (xs @ [(unit_literal, lit_val, false, 0)])) f_map new_state i_map inv_map prop 0 in 
+                                    (
+                                     match conf with
+                                        | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) 
+                                                dpll_twl_inc_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map  0
+                                        | x :: xs -> false
+                                    )
+                                 );;
 
 let sat_inc formula cs i_map inv_map =
     let state = Simplex_inc.init_simplex Simplex_inc.linorder_nat (Util.to_simplex_format_inc_init cs i_map) in
