@@ -1021,6 +1021,15 @@ let rec convert_unsat_core_rec unsat_core inv_map result =
 
 let convert_unsat_core unsat_core = convert_unsat_core_rec unsat_core inv_map [];;
 
+let rec get_checkpoint checkpoints dl = 
+    match checkpoints with
+        | [] -> failwith "[Invalid argument] no simplex checkpoint for target decision level"
+        | (l, cp) :: xs -> (
+                            match compare l dl with
+                                | 0 -> cp
+                                | _ -> get_checkpoint xs dl
+                           );;
+
 let rec preprocess_unit_clauses_inc_rec formula new_formula new_assignment prop conf s_state i_map inv_map =
     match formula with 
         | Formula (Conjunction ([])) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), prop, conf, s_state)
@@ -1132,14 +1141,15 @@ let rec dpll_twl_inc_rec assignment formula f_map s_state checkpoints i_map inv_
         | true -> (
                    (*Printing.print_assignment assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*) 
                    match Simplex_inc.check_simplex Simplex_inc.equal_nat Simplex_inc.linorder_nat s_state with
-                    | Simplex_inc.Inl (unsat_core) -> (* TODO: reset state when calling restart using backtrack_simplex *)
-                                                     let ys = (Disjunction (transform_to_neg_clause (convert_unsat_core unsat_core inv_map))) in 
+                    | Simplex_inc.Inl (unsat_core) -> let (num, cp) = hd (checkpoints) in
+                                                      let r_state = Simplex_inc.backtrack_simplex cp s_state in
+                                                       let ys = (Disjunction (transform_to_neg_clause (convert_unsat_core unsat_core inv_map))) in 
                                                         printf "restart\n\n";
-                                                        restart_twl_inc assignment (learn formula ys) (add_clause_to_map f_map ys) s_state [hd (checkpoints)] i_map inv_map
+                                                        restart_twl_inc assignment (learn formula ys) (add_clause_to_map f_map ys) r_state [hd (checkpoints)] i_map inv_map
                     | Simplex_inc.Inr (n_state) -> (* According to my understanding this is sufficient info to determine that formula is SAT *)
                                                     true
                   )
-        | false -> let new_cps = checkpoints @ [(dl, Simplex_inc.checkpoint_simplex s_state)] in(* TODO: checkpoint_simplex *)
+        | false -> let new_cps = checkpoints @ [(dl, Simplex_inc.checkpoint_simplex s_state)] in
                     let (new_assignment, new_map, new_dl, new_state, prop, conf) = decision_twl_inc formula assignment f_map s_state i_map inv_map dl in 
                     (
                      match conf with 
@@ -1151,42 +1161,47 @@ let rec dpll_twl_inc_rec assignment formula f_map s_state checkpoints i_map inv_
                                                      match n_conf with
                                                       | [] -> (
                                                                 match Simplex_inc.check_simplex Simplex_inc.equal_nat Simplex_inc.linorder_nat n_state with
-                                                                    | Inl (unsat_core) -> (* TODO: reset state when calling restart using backtrack_simplex *)
+                                                                    | Inl (unsat_core) -> let (num, cp) = hd (checkpoints) in
+                                                                                          let r_state = Simplex_inc.backtrack_simplex cp n_state in
                                                                                           (
                                                                                            match length unsat_core with 
                                                                                             | 0 -> failwith "[Invalid argument] unsat core empty"
                                                                                             | 1 -> (
                                                                                                     match (hd (convert_unsat_core unsat_core inv_map)) with
-                                                                                                        | Atom (y) -> restart_twl_inc_unit n_assignment formula f_map s_state [hd (checkpoints)] i_map inv_map y false
-                                                                                                        | Not (Atom (y)) -> restart_twl_inc_unit n_assignment formula f_map s_state [hd (checkpoints)] i_map inv_map y true
+                                                                                                        | Atom (y) -> restart_twl_inc_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y false
+                                                                                                        | Not (Atom (y)) -> restart_twl_inc_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
                                                                                                    )
                                                                                             | _ -> let ys = (Disjunction (transform_to_neg_clause (convert_unsat_core unsat_core inv_map))) in 
-                                                                                                    printf "restart\n\n"; restart_twl_inc assignment (learn formula ys) (add_clause_to_map n_map ys) s_state [hd (checkpoints)] i_map inv_map
+                                                                                                    printf "restart\n\n"; restart_twl_inc assignment (learn formula ys) (add_clause_to_map n_map ys) r_state [hd (checkpoints)] i_map inv_map
                                                                                           )
                                                                     | Inr (state) -> dpll_twl_inc_rec n_assignment formula n_map state new_cps i_map inv_map new_dl
                                                                )
                                                       | x :: xs -> (
-                                                                    (* TODO: backjump using simplex checkpoints *)
                                                                     let (ys, bj_clause) = (backjump_twl n_assignment formula (hd n_conf)) in 
+                                                                     let cdl = (get_current_decision_level ys) in
+                                                                      let cp = get_checkpoint new_cps cdl in 
+                                                                       let b_state = Simplex_inc.backtrack_simplex cp n_state in 
                                                                         (
                                                                          printf "backjump\n\n"; match (bj_clause, (conflict_exists ys formula)) with
                                                                             | (_, true) -> false
-                                                                            | (Disjunction ([]), false) -> dpll_twl_inc_rec ys formula new_map s_state i_map (get_current_decision_level ys)
-                                                                            | (Disjunction ([z]), false) -> dpll_twl_inc_rec ys formula new_map s_state i_map (get_current_decision_level ys)
-                                                                            | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_rec ys formula_l (add_clause_to_map new_map bj_clause) s_state i_map (get_current_decision_level ys)
+                                                                            | (Disjunction ([]), false) -> dpll_twl_inc_rec ys formula new_map b_state i_map cdl
+                                                                            | (Disjunction ([z]), false) -> dpll_twl_inc_rec ys formula new_map b_state i_map cdl
+                                                                            | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_rec ys formula_l (add_clause_to_map new_map bj_clause) b_state i_map cdl
                                                                         )
                                                                    )
                                                     )
                                 )
                         | x :: xs -> (
-                                     (* TODO: backjump using simplex checkpoints *)
                                       let (ys, bj_clause) = (backjump_twl new_assignment formula (hd conf)) in 
+                                       let cdl = (get_current_decision_level ys) in
+                                        let cp = get_checkpoint new_cps cdl in 
+                                         let b_state = Simplex_inc.backtrack_simplex cp new_state in 
                                         (
                                          printf "backjump\n\n"; match (bj_clause, (conflict_exists ys formula)) with
                                             | (_, true) -> false
-                                            | (Disjunction ([]), false) -> dpll_twl_inc_rec ys formula new_map s_state i_map (get_current_decision_level ys)
-                                            | (Disjunction ([z]), false) -> dpll_twl_inc_rec ys formula new_map s_state i_map (get_current_decision_level ys)
-                                            | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_rec ys formula_l (add_clause_to_map new_map bj_clause) s_state i_map (get_current_decision_level ys)
+                                            | (Disjunction ([]), false) -> dpll_twl_inc_rec ys formula new_map b_state i_map cdl
+                                            | (Disjunction ([z]), false) -> dpll_twl_inc_rec ys formula new_map b_state i_map cdl
+                                            | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_rec ys formula_l (add_clause_to_map new_map bj_clause) b_state i_map cdl
                                         )
                                      )
                                       
