@@ -18,7 +18,9 @@ let parse_with_error lexbuf =
 
 let rec parse lexbuf = 
     match parse_with_error lexbuf with
-        | Some value -> Util.time Solver.sat (Util.time Tseitin.tseitin_transformation value);
+        | Some value -> (*Util.time Solver.sat (Util.time Tseitin.tseitin_transformation value); *)
+                        let (f, cs, i_map, inv_map) = (Util.time Tseitin.tseitin_transformation_inc value) in
+                            Util.time Solver.sat_inc (f, cs, i_map, inv_map);
                         (*printf "Before Tseitin: \n\n";
                         Solver.print_formula value;
                         printf "\n\nAfter Tseitin \n\n";

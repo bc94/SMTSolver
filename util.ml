@@ -1,5 +1,6 @@
 open Types
 open Simplex
+open Simplex_inc
 open Big_int
 
 (* Print execution time of function 'f' applied to argument 'x' *)
@@ -407,6 +408,38 @@ let to_simplex_format_init assignment = to_simplex_format assignment [] 0 [] [];
 (* Incremental simplex version of the format conversion functions *)
 (******************************************************************)
 
+let rec op_to_simplex_format_inc operator varlist varcount = 
+    match operator with
+        | Var (x) -> (
+                      match (is_in_varlist varlist x) with 
+                        | -1 -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), (varlist @ [(x, varcount + 1)]), (varcount + 1))
+                        | m -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), varlist, varcount) 
+                     )
+        | Num (n) -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))), varlist, varcount)
+        | Sum (s) -> (
+                      match s with
+                       | [x] -> op_to_simplex_format_inc x varlist varcount
+                       | x :: xs -> (
+                                     match (op_to_simplex_format_inc x varlist varcount) with
+                                        | (s_lp, newlist_s, newcount_s) -> (
+                                                                        match (op_to_simplex_format_inc (Sum (xs)) newlist_s newcount_s) with
+                                                                            | (ss_lp, newlist, newcount) -> ((Simplex_inc.plus_linear_poly s_lp ss_lp), newlist, newcount)
+                                                                       )
+                                    )
+                       | [] -> failwith "[Invalid argument] op_to_simplex_format: empty list Sum ([])"
+                     )
+        | Prod ([Var (x); Num (n)]) -> (
+                                        match (is_in_varlist varlist x) with 
+                                        | -1 -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), (varlist @ [(x, varcount + 1)]), (varcount + 1))
+                                        | m -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), varlist, varcount) 
+                                       )               
+        | Prod ([Num (n); Var (x)]) -> (
+                                        match (is_in_varlist varlist x) with 
+                                        | -1 -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), (varlist @ [(x, varcount + 1)]), (varcount + 1))
+                                        | m -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), varlist, varcount) 
+                                       )       
+        | _ -> failwith "[Invalid argument] op_to_simplex_format";;
+
 let rec to_simplex_format_inc assignment varlist varcount result cs i_map = 
     match assignment with
         | Assignment ([]) -> (result, Assignment (cs))
@@ -419,40 +452,40 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                         | (Var (x), Num (n)) -> 
                                                                            (
                                                                             match ((is_in_varlist varlist x), v) with
-                                                                            | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
-                                                                                                                                                                                                       (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) 
+                                                                            | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                       (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) 
                                                                                                                                                                                (cs @ [(c, v, d, dl)])
                                                                                                                                                                                i_map                        
-                                                                            | (-1, false) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.GEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
-                                                                                                                                                                                                       (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))])
+                                                                            | (-1, false) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                       (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))])
                                                                                                                                                                                (cs @ [(c, v, d, dl)])    
                                                                                                                                                                                i_map              
-                                                                            | (m, true) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.LEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
-                                                                                                                                                                        (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))])
+                                                                            | (m, true) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                        (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))])
                                                                                                                                                 (cs @ [(c, v, d, dl)])       
                                                                                                                                                 i_map
-                                                                            | (m, false) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
-                                                                                                                                                                        (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))])
+                                                                            | (m, false) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                        (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))])
                                                                                                                                                  (cs @ [(c, v, d, dl)])  
                                                                                                                                                  i_map
                                                                            )
                                                         | (Num (n), Var (x)) ->
                                                                            (
                                                                             match ((is_in_varlist varlist x), v) with
-                                                                            | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.GEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
-                                                                                                                                                                                                      (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))])
+                                                                            | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                      (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))])
                                                                                                                                                                                (cs @ [(c, v, d, dl)]) 
                                                                                                                                                                                i_map
-                                                                            | (-1, false) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))),
-                                                                                                                                                                                                        (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))])
+                                                                            | (-1, false) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))),
+                                                                                                                                                                                                        (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))])
                                                                                                                                                                                 (cs @ [(c, v, d, dl)])
                                                                                                                                                                                 i_map
-                                                                            | (m, true) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
-                                                                                                                                                                       (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))])
+                                                                            | (m, true) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                       (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))])
                                                                                                                                                 (cs @ [(c, v, d, dl)])
                                                                                                                                                 i_map
-                                                                            | (m, false) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.LEQ ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), 
-                                                                                                                                                                         (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))])
+                                                                            | (m, false) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                         (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))])
                                                                                                                                                  (cs @ [(c, v, d, dl)])
                                                                                                                                                  i_map
                                                                            )
@@ -461,39 +494,39 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                              match (is_in_varlist varlist x) with 
                                                                               | -1 -> (
                                                                                        match ((is_in_varlist varlist y), v) with 
-                                                                                        | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)] @ [(y, varcount + 2)]) (varcount + 2) (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
-                                                                                                                                                                                                                                           (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 2))))))])
+                                                                                        | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)] @ [(y, varcount + 2)]) (varcount + 2) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQPP ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                                                           (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 2))))))])
                                                                                                                                                                                                                  (cs @ [(c, v, d, dl)])
                                                                                                                                                                                                                  i_map
                                                                                         | (_, false) -> ( 
                                                                                                           match (transform_constraint (Var (x), Sum ([(Var (y)); (Num (1))]))) with 
                                                                                                                 | (Num (n), sums) -> (
-                                                                                                                                      match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                                      match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                                                                         | (s_lp, newlist, newcount) -> 
-                                                                                                                                            to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                                    )
+                                                                                                                                            to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                                     )
                                                                                                          )
-                                                                                        | (m, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), 
-                                                                                                                                                                                                                    (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m)))))])
+                                                                                        | (m, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQPP ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                                    (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m)))))])
                                                                                                                                                                                           (cs @ [(c, v, d, dl)]) 
                                                                                                                                                                                           i_map
                                                                                       )   
                                                                               | m1 -> (
                                                                                        match ((is_in_varlist varlist y), v) with 
-                                                                                        | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(y, varcount + 1)]) (varcount + 1) (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m1))), 
-                                                                                                                                                                                                                     (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1))))))])
+                                                                                        | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(y, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQPP ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m1))), 
+                                                                                                                                                                                                                     (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1))))))])
                                                                                                                                                                                            (cs @ [(c, v, d, dl)]) 
                                                                                                                                                                                            i_map
                                                                                         | (_, false) -> ( 
                                                                                                           match (transform_constraint (Var (x), Sum ([(Var (y)); (Num (1))]))) with 
                                                                                                                 | (Num (n), sums) -> (
-                                                                                                                                      match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                                      match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                                                                         | (s_lp, newlist, newcount) -> 
-                                                                                                                                            to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                                    )
+                                                                                                                                            to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                                     )
                                                                                                          )
-                                                                                        | (m2, true) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m1))), 
-                                                                                                                                                                                       (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m2)))))])
+                                                                                        | (m2, true) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQPP ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m1))), 
+                                                                                                                                                                                       (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m2)))))])
                                                                                                                                                              (cs @ [(c, v, d, dl)])
                                                                                                                                                              i_map
                                                                                       ) 
@@ -502,12 +535,12 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                         ( 
                                                                          match (transform_constraint (Sum (s), Var (x))) with 
                                                                             | (sums, Num (n)) -> (
-                                                                                            match (op_to_simplex_format sums varlist varcount) with
+                                                                                            match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                )
                                                                                                 )
                                                                         )
@@ -515,12 +548,12 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                         ( 
                                                                          match (transform_constraint (Var (x), Sum (s))) with 
                                                                             | (Num (n), sums) -> (
-                                                                                            match (op_to_simplex_format sums varlist varcount) with
+                                                                                            match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                )
                                                                                                 )
                                                                         )
@@ -528,12 +561,12 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                         ( 
                                                                          match (transform_constraint (Sum (s), Num (n))) with 
                                                                             | (sums, Num (m)) -> (
-                                                                                            match (op_to_simplex_format sums varlist varcount) with
+                                                                                            match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int m) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (m + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int m) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (m + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                )
                                                                                                 )
                                                                         )
@@ -541,83 +574,83 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                         ( 
                                                                          match (transform_constraint (Num (n), Sum (s))) with 
                                                                             | (Num (m), sums) -> (
-                                                                                            match (op_to_simplex_format sums varlist varcount) with
+                                                                                            match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (m + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int m) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (m + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int m) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                )
                                                                                                 )
                                                                         )
                                                         | (Prod (p), Var (x)) ->
                                                                            (
-                                                                            match (op_to_simplex_format (Prod (p)) varlist varcount) with
+                                                                            match (op_to_simplex_format_inc (Prod (p)) varlist varcount) with
                                                                                 | (p_lp, newlist, newcount) -> 
                                                                                                     (
                                                                                                      match ((is_in_varlist newlist x), v) with 
-                                                                                                        | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (newlist @ [(x, newcount + 1)]) (newcount + 1) (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (newcount + 1))))))])
+                                                                                                        | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (newlist @ [(x, newcount + 1)]) (newcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQPP (p_lp, (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (newcount + 1))))))])
                                                                                                                                                                                                            (cs @ [(c, v, d, dl)])
                                                                                                                                                                                                            i_map
                                                                                                         | (_, false) -> ( 
                                                                                                                         match (transform_constraint (Prod (p), Sum ([(Var (x)); (Num (1))]))) with 
                                                                                                                                 | (Num (n), sums) -> (
-                                                                                                                                                    match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                                                    match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                                                                                         | (s_lp, newlist, newcount) -> 
-                                                                                                                                                            to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                                                            to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                                                     )
                                                                                                                         )      
-                                                                                                        | (m, true) -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQPP (p_lp, (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m)))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                        | (m, true) -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQPP (p_lp, (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m)))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                     )
                                                                            )
                                                         | (Var (x), Prod (p)) ->
                                                                            (
-                                                                            match (op_to_simplex_format (Prod (p)) varlist varcount) with
+                                                                            match (op_to_simplex_format_inc (Prod (p)) varlist varcount) with
                                                                                 | (p_lp, newlist, newcount) -> 
                                                                                                     (
                                                                                                      match ((is_in_varlist newlist x), v) with 
-                                                                                                        | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (newlist @ [(x, newcount + 1)]) (newcount + 1) (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (newcount + 1)))), p_lp))])
+                                                                                                        | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (newlist @ [(x, newcount + 1)]) (newcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQPP ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (newcount + 1)))), p_lp))])
                                                                                                                                                                                                            (cs @ [(c, v, d, dl)]) 
                                                                                                                                                                                                            i_map
                                                                                                         | (_, false) -> ( 
                                                                                                                         match (transform_constraint (Var (x), Sum ([(Prod (p)); (Num (1))]))) with 
                                                                                                                                 | (Num (n), sums) -> (
-                                                                                                                                                    match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                                                    match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                                                                                         | (p_lp, newlist, newcount) -> 
-                                                                                                                                                            to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                                                            to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                                                     )
                                                                                                                         )  
-                                                                                                        | (m, true) -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQPP ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), p_lp))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                        | (m, true) -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQPP ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), p_lp))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                     )
                                                                            )
                                                         | (Prod (p), Num (n)) ->
                                                                            (
-                                                                            match (op_to_simplex_format (Prod (p)) varlist varcount) with
+                                                                            match (op_to_simplex_format_inc (Prod (p)) varlist varcount) with
                                                                                 | (p_lp, newlist, newcount) -> (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map  
-                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map            
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map  
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map            
                                                                                                                )        
                                                                            )
                                                         | (Num (n), Prod (p)) ->
                                                                            (
-                                                                            match (op_to_simplex_format (Prod (p)) varlist varcount) with
+                                                                            match (op_to_simplex_format_inc (Prod (p)) varlist varcount) with
                                                                                 | (p_lp, newlist, newcount) -> (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.GEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.LEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map  
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map  
                                                                                                                )  
                                                                            )
                                                         | (Sum (s), Prod (p)) ->
                                                                         ( 
                                                                          match (transform_constraint (Sum (s), Prod (p))) with 
                                                                             | (sums, Num (n)) -> (
-                                                                                            match (op_to_simplex_format sums varlist varcount) with
+                                                                                            match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                )
                                                                                                 )
                                                                         )
@@ -625,12 +658,12 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                         ( 
                                                                          match (transform_constraint (Prod (p), Sum (s))) with 
                                                                             | (Num (n), sums) -> (
-                                                                                            match (op_to_simplex_format sums varlist varcount) with
+                                                                                            match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                )
                                                                                                 )
                                                                         )   
@@ -638,12 +671,12 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                         ( 
                                                                          match (transform_constraint (Sum (s1), Sum (s2))) with 
                                                                             | (sums, Num (n)) -> (
-                                                                                            match (op_to_simplex_format sums varlist varcount) with
+                                                                                            match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                             | (s_lp, newlist, newcount) -> 
                                                                                                                (
                                                                                                                 match v with 
-                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
-                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (s_lp, (Simplex.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n + 1)) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                )
                                                                                                 )
                                                                         )
@@ -651,19 +684,19 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                            (
                                                                             match v with 
                                                                              | true -> (
-                                                                                        match (op_to_simplex_format (Prod (p1)) varlist varcount) with
+                                                                                        match (op_to_simplex_format_inc (Prod (p1)) varlist varcount) with
                                                                                          | (p1_lp, newlist_p1, newcount_p1) -> 
                                                                                                 (
-                                                                                                 match (op_to_simplex_format (Prod (p2)) newlist_p1 newcount_p1) with
-                                                                                                    | (p2_lp, newlist, newcount) -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.LEQPP (p1_lp, p2_lp))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                 match (op_to_simplex_format_inc (Prod (p2)) newlist_p1 newcount_p1) with
+                                                                                                    | (p2_lp, newlist, newcount) -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQPP (p1_lp, p2_lp))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                 )
                                                                                        )
                                                                              | false -> ( 
                                                                                          match (transform_constraint (Prod (p1), Sum ([(Prod (p2)); (Num (1))]))) with 
                                                                                             | (Num (n), sums) -> (
-                                                                                                                  match (op_to_simplex_format sums varlist varcount) with
+                                                                                                                  match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                                                     | (p_lp, newlist, newcount) -> 
-                                                                                                                        to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GEQ (p_lp, (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                        to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1))))]) (cs @ [(c, v, d, dl)]) i_map
                                                                                                                  )
                                                                                         )  
                                                                            )     
@@ -671,8 +704,8 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                                    match (compare n1 n2) with
                                                                                     | 1 -> (
                                                                                             match v with   
-                                                                                            | true -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [((Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map), Simplex.GTPP (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int 0)), 
-                                                                                                                                                                                    Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int 0))))]) 
+                                                                                            | true -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GTPP (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0)), 
+                                                                                                                                                                                    Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))))]) 
                                                                                                                                                            (cs @ [(c, v, d, dl)])
                                                                                                                                                            i_map
                                                                                             | false -> to_simplex_format_inc (Assignment (xs)) varlist varcount result (cs @ [(c, v, d, dl)]) i_map
@@ -680,8 +713,8 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                                     | _ -> (
                                                                                             match v with 
                                                                                              | true -> to_simplex_format_inc (Assignment (xs)) varlist varcount result (cs @ [(c, v, d, dl)]) i_map
-                                                                                             | false -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [((Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map), Simplex.GTPP (Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int 0)), 
-                                                                                                                                                                                      Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int 0))))])
+                                                                                             | false -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GTPP (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0)), 
+                                                                                                                                                                                      Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))))])
                                                                                                                                                              (cs @ [(c, v, d, dl)])      
                                                                                                                                                              i_map
                                                                                            )

@@ -1,4 +1,5 @@
 module Index_Map = Map.Make(String);;
+module Inv_Map = Map.Make(struct type t = int let compare = compare end);;
 
 open Types
 open List
@@ -120,7 +121,7 @@ let rec transform_elem_inc e cs i_map inv_map i n_aux n_last =
                                         match (transform_elem_inc (hd (remove_last xs)) cs i_map inv_map i (n_last + 1) (n_last + 2)) with
                                             | (ys, n1, cs_n, i_map_n, inv_map_n, i_n) -> (
                                                               match (transform_elem_inc (hd (rev xs)) cs_n i_map_n inv_map_n i_n (n_last + 2) (n1)) with 
-                                                                | (zs, n2, cs_new, i_map_new, inv_map_new i_new) -> 
+                                                                | (zs, n2, cs_new, i_map_new, inv_map_new, i_new) -> 
                                                                         ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1))])] @ 
                                                                          [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 2))])] @ 
                                                                          [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1))); Not (Atom (AuxVar (n_last + 2)))])] @ 
@@ -197,15 +198,15 @@ let rec transform_elem_inc e cs i_map inv_map i n_aux n_last =
                        n_last,
                        (cs @ [(x, true, false, 0)] @ [(x, false, false, 0)]),
                        (Index_Map.add ("-" ^ Printing.print_constraint_n x) (i + 1) (Index_Map.add (Printing.print_constraint_n x) i (i_map))),
-                       (Index_Map.add (i + 1) (x, false, false, 0) (Index_Map.add i (x, true, false, 0) inv_map)),
+                       (Inv_Map.add (i + 1) (x, false, false, 0) (Inv_Map.add i (x, true, false, 0) inv_map)),
                        i + 2)
         | _ -> failwith "[Invalid argument]: transform_elem_inc";;
 
 let tseitin_transformation_inc_n f n_aux n_last = 
     match f with
         | Formula (x) -> (
-                          match (transform_elem_inc x [] Index_Map.empty Index_Map.empty 0 n_aux n_last) with
-                            | (xs, n, cs, i_map, inv_map i) -> (Formula (Conjunction ([Atom (AuxVar n_aux)] @ xs)), Assignment (cs), i_map)
+                          match (transform_elem_inc x [] Index_Map.empty Inv_Map.empty 0 n_aux n_last) with
+                            | (xs, n, cs, i_map, inv_map, i) -> (Formula (Conjunction ([Atom (AuxVar n_aux)] @ xs)), Assignment (cs), i_map, inv_map)
                             | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n"
                          )
         | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n";;

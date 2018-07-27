@@ -1,18 +1,32 @@
 module Simplex_inc : sig
   type 'a equal
-  type nat
+  type int = Int_of_integer of Big_int.big_int
+  type nat = Nat of Big_int.big_int
+  type rat = Frct of (int * int)
+  type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list
+  type linear_poly = LinearPoly of (nat, rat) fmap
+  type constrainta = LT of linear_poly * rat | GT of linear_poly * rat |
+    LEQ of linear_poly * rat | GEQ of linear_poly * rat |
+    EQ of linear_poly * rat | LTPP of linear_poly * linear_poly |
+    GTPP of linear_poly * linear_poly | LEQPP of linear_poly * linear_poly |
+    GEQPP of linear_poly * linear_poly | EQPP of linear_poly * linear_poly
   type 'a linorder
   type qDelta
   type 'a lrv
   type 'a atom
   type ('a, 'b) sum = Inl of 'a | Inr of 'b
-  type linear_poly
   type ('a, 'b) mapping
   type ('a, 'b) state
-  type constrainta
   type 'a ns_constraint
-  let equal_nat = ({equal = equal_nata} : nat equal)
-  let linorder_nat = ({order_linorder = order_nat} : nat linorder)
+  val equal_nat : nat equal
+  val linorder_nat : nat linorder
+  val lrv_QDelta : qDelta lrv
+  val equal_QDelta : qDelta equal
+  val integer_of_nat : nat -> Big_int.big_int
+  val lp_monom : rat -> nat -> linear_poly
+  val rat_of_int_pair : Big_int.big_int -> Big_int.big_int -> rat
+  val nat_of_integer : Big_int.big_int -> nat
+  val plus_linear_poly : linear_poly -> linear_poly -> linear_poly
   val init_simplex :
     'a linorder ->
       ('a * constrainta) list ->
@@ -1312,5 +1326,15 @@ let rec assert_simplex _C (_D1, _D2)
 let rec backtrack_simplex c (cs, (asi, s)) = (cs, (asi, backtrack_s c s));;
 
 let rec checkpoint_simplex (cs, (asi, s)) = checkpoint_s s;;
+
+let rec of_int a = Frct (a, one_int);;
+
+let rec lp_monom
+  c x = LinearPoly
+          (if equal_rat c zero_rat then fmempty
+            else fmupd equal_nat x c fmempty);;
+
+let rec rat_of_int_pair
+  n d = divide_rat (of_int (Int_of_integer n)) (of_int (Int_of_integer d));;
 
 end;; (*struct simplex_inc*)
