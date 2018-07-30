@@ -16,27 +16,30 @@ let parse_with_error lexbuf =
           fprintf stderr "%a: syntax error\n" print_pos lexbuf;
           exit (-1)
 
-let rec parse lexbuf = 
+let rec parse lexbuf option = 
     match parse_with_error lexbuf with
-        | Some value -> (*Util.time Solver.sat (Util.time Tseitin.tseitin_transformation value); *)
-                        let (f, cs, i_map, inv_map) = (Util.time Tseitin.tseitin_transformation_inc value) in
-                            Util.time Solver.sat_inc (f, cs, i_map, inv_map);
+        | Some value -> (
+                         match option with
+                            | "incremental" -> let (f, cs, i_map, inv_map) = (Util.time Tseitin.tseitin_transformation_inc value) in
+                                                Util.time Solver.sat_inc (f, cs, i_map, inv_map)
+                            | "twl" -> Util.time Solver.sat (Util.time Tseitin.tseitin_transformation value)
+                            | _ -> failwith "Unknown command line option"
                         (*printf "Before Tseitin: \n\n";
                         Solver.print_formula value;
                         printf "\n\nAfter Tseitin \n\n";
                         Solver.print_formula (Solver.tseitin_transformation value);*)
-                        parse lexbuf
+                        ); parse lexbuf option
         | None -> ()
 
-let loop filename () =
+let loop filename option () =
     let inx = In_channel.create filename in
         let lexbuf = Lexing.from_channel inx in
             lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename};
-            parse lexbuf;
+            parse lexbuf option;
             In_channel.close inx
 
 let () =
   Command.basic ~summary:"Parse and print formula"
-    Command.Spec.(empty +> anon ("filename" %: file))
+    Command.Spec.(empty +> anon ("filename" %: file) +> anon ("option" %: string))
     loop 
 |> Command.run
