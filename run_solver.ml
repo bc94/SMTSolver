@@ -22,7 +22,8 @@ let rec parse lexbuf option =
                          match option with
                             | "incremental" -> let (f, cs, i_map, inv_map) = (Util.time Tseitin.tseitin_transformation_inc value) in
                                                 Util.time Solver.sat_inc (f, cs, i_map, inv_map)
-                            | "twl" -> Util.time Solver.sat (Util.time Tseitin.tseitin_transformation value)
+                            | "twl" -> Util.time Solver.sat_twl (Util.time Tseitin.tseitin_transformation value)
+                            | "simple" -> Util.time Solver.sat (Util.time Tseitin.tseitin_transformation value)
                             | _ -> failwith "Unknown command line option"
                         (*printf "Before Tseitin: \n\n";
                         Solver.print_formula value;

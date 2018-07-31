@@ -26,8 +26,7 @@ let rec is_assigned (assignment : assignment) (literal : element) =
                                                                             | _ -> is_assigned (Assignment xs) literal
                                                                          )
                                     | _ -> failwith "[Invalid argument] is_assigned: second argument is not a literal"
-                                  )
-        | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;
+                                  );;
 
 let rec is_true (assignment : assignment) (literal : element) = 
     match assignment with
@@ -47,8 +46,7 @@ let rec is_true (assignment : assignment) (literal : element) =
                                                                              )   
                                     | ((y, false, d, dl), Atom(z)) -> is_true (Assignment xs) literal
                                     | _ -> failwith "[Invalid argument] is_true: second argument not a literal"
-                                  )
-        | _ -> failwith "[Invalid argument] first argument is not a constraint_n * bool list";;        
+                                  );;    
 
 let rec is_clause_satisfied assignment clause =
     match clause with 
@@ -113,7 +111,6 @@ let rec unassigned_or_true_l assignment clause ls =
                                                     | true -> unassigned_or_true_l assignment (Disjunction (xs)) ls
                                                     | false -> unassigned_or_true_l assignment (Disjunction (xs)) (ls @ [x])
                                                )
-                                    | _ -> failwith "[Invalid argument] unassigned_or_true_l"
                                   )
         | _ -> failwith "[Invalid argument] unassigned_or_true_l";;
 
@@ -126,8 +123,7 @@ let unit_propagation_applicable assignment clause =
                  match (length xs, is_assigned assignment (hd xs)) with
                     | (1, false) -> xs
                     | (_, _) -> []
-                )
-        | _ -> failwith "[Invalid argument] unit_propagation_applicable";;
+                );;
 
 let rec unit_propagation_applicable_f assignment formula =
     match formula with
@@ -178,15 +174,13 @@ let rec find_conflict assignment formula =
 let conflict_exists assignment formula = 
     match (find_conflict assignment formula) with 
         | [] -> false
-        | x :: xs -> true
-        | _ -> failwith "[Invalid argument] conflict_exists";;
+        | x :: xs -> true;;
 
 let rec get_decision_literals_l assignment ls = 
     match assignment with 
         | Assignment ([]) -> ls
         | Assignment ((c, v, true, dl) :: xs) -> (get_decision_literals_l (Assignment xs) (ls @ [(c, v, true, dl)]))
-        | Assignment ((c, v, false, dl) :: xs) -> (get_decision_literals_l (Assignment xs) ls)
-        | _ -> failwith "[Invalid argument] get_decision_literals";;
+        | Assignment ((c, v, false, dl) :: xs) -> (get_decision_literals_l (Assignment xs) ls);;
 
 let get_decision_literals assignment = Assignment (get_decision_literals_l assignment []);;
 
@@ -259,6 +253,7 @@ let rec contains_literal lit_list literal =
                                                             | 0 -> Some (false)
                                                             | _ -> contains_literal xs literal
                                                         )
+                        | _ -> failwith "[Invalid argument] contains_literal: literal list contains non-literal"
                      );;
 
 let rec remove_literal clause literal acc =
@@ -278,7 +273,9 @@ let rec remove_literal clause literal acc =
                                                             | 0 -> remove_literal (Disjunction (xs)) literal acc
                                                             | _ -> remove_literal (Disjunction (xs)) literal (acc @ [x])
                                                                         )
-                                   );;
+                                        | _ -> failwith "[Invalid argument] remove_literal: argument not a literal"
+                                   )
+        | _ -> failwith "[Invalid argument] remove_literal: first argument not a clause";;
 
 let rec propagate formula_opt literal acc next_lit conf = 
     match formula_opt with
@@ -289,12 +286,15 @@ let rec propagate formula_opt literal acc next_lit conf =
                                                                     | Some (false) -> (
                                                                                        match (length x) with
                                                                                         | 1 -> ((Formula (Conjunction (acc))), next_lit, true)
-                                                                                        | _ -> let (Disjunction (y)) = (remove_literal (Disjunction (x)) literal []) in
-                                                                                                (
-                                                                                                 match (length y) with
-                                                                                                    | 1 -> propagate (Formula (Conjunction (xs))) literal (acc @ [Disjunction (y)]) y conf
-                                                                                                    | _ -> propagate (Formula (Conjunction (xs))) literal (acc @ [Disjunction (y)]) next_lit conf
-                                                                                                )
+                                                                                        | _ -> (
+                                                                                                match (remove_literal (Disjunction (x)) literal []) with
+                                                                                                | (Disjunction (y)) -> (
+                                                                                                                        match (length y) with
+                                                                                                                            | 1 -> propagate (Formula (Conjunction (xs))) literal (acc @ [Disjunction (y)]) y conf
+                                                                                                                            | _ -> propagate (Formula (Conjunction (xs))) literal (acc @ [Disjunction (y)]) next_lit conf
+                                                                                                                        )
+                                                                                                | _ -> failwith "[Invalid argument] propagate: remove_literal did not return a clause"
+                                                                                               )
                                                                                       )
                                                                     | None -> propagate (Formula (Conjunction (xs))) literal (acc @ [Disjunction (x)]) next_lit conf
                                                                )
@@ -312,16 +312,19 @@ let rec exhaustive_propagate assignment formula_opt literal dl =
                                      let Assignment (xs) = assignment in match literal with
                                         | Atom (x) -> ((Assignment (xs @ [(x, true, false, dl)])), f_new, true)
                                         | Not (Atom (x)) -> ((Assignment (xs @ [(x, false, false, dl)])), f_new, true)
+                                        | _ -> failwith "[Invalid argument] exhaustive_propagate: argument not a literal"
                                      )
         | (f_new, [], false) -> (
                                  let Assignment (xs) = assignment in match literal with
                                     | Atom (x) -> ((Assignment (xs @ [(x, true, false, dl)])), f_new, false)
                                     | Not (Atom (x)) -> ((Assignment (xs @ [(x, false, false, dl)])), f_new, false)
+                                    | _ -> failwith "[Invalid argument] exhaustive_propagate: argument not a literal"
                                 )
         | (f_new, next_lit, false) -> (
                                      let Assignment (xs) = assignment in match literal with
                                         | Atom (x) -> exhaustive_propagate (Assignment (xs @ [(x, true, false, dl)])) f_new (hd next_lit) dl
                                         | Not (Atom (x)) -> exhaustive_propagate (Assignment (xs @ [(x, false, false, dl)])) f_new (hd next_lit) dl
+                                        | _ -> failwith "[Invalid argument] exhaustive_propagate: argument not a literal"
                                      );;
 
 let rec unit_propagation assignment formula_it formula_opt dl = 
@@ -391,6 +394,7 @@ let rec decision assignment formula_opt dl =
                                                                             match (hd x) with 
                                                                                 | Atom (y) -> ((Assignment (ys @ [(y, true, true, dl + 1)])), f_new, conf)
                                                                                 | Not (Atom (y)) -> ((Assignment (ys @ [(y, false, true, dl + 1)])), f_new, conf)
+                                                                                | _ -> failwith "[Invalid argument] decision: formula not in CNF"
                                                                            )
                                                                )
         | _ -> failwith "[Invalid argument] formula not in cnf";;    
@@ -411,14 +415,12 @@ let rec is_still_conflict (assignment : (constraint_n * bool * bool * int) list)
                       match (unassigned_or_true (Assignment (assignment)) clause) with
                         | [] -> true 
                         | y :: ys -> false
-                     )
-        | _ -> failwith "[Invalid argument] is_still_conflict";;
+                     );;
 
 let rec find_minimal_i_l (assignment : (constraint_n * bool * bool * int) list) formula clause ls =
     match (is_still_conflict ls formula clause) with
         | true -> ls
-        | false -> find_minimal_i_l (tl assignment) formula clause (ls @ [(hd assignment)])
-        | _ -> failwith "[Invalid argument] find_minimal_i";;
+        | false -> find_minimal_i_l (tl assignment) formula clause (ls @ [(hd assignment)]);;
 
 let find_minimal_i (assignment : (constraint_n * bool * bool * int) list) formula clause = find_minimal_i_l assignment formula clause [];;
 
@@ -426,8 +428,7 @@ let rec transform_to_neg_clause assignment =
     match assignment with 
         | Assignment ([]) -> []
         | Assignment ((c, true, d, dl) :: xs) -> [Not (Atom c)] @ (transform_to_neg_clause (Assignment xs))
-        | Assignment ((c, false, d, dl) :: xs) -> [Atom c] @ (transform_to_neg_clause (Assignment xs))
-        | _ -> failwith "[Invalid argument] transform_to_neg_clause";;
+        | Assignment ((c, false, d, dl) :: xs) -> [Atom c] @ (transform_to_neg_clause (Assignment xs));;
 
 let rec get_last_dl_literals_rec (assignment : (constraint_n * bool * bool * int) list) dl =
     match assignment with
@@ -440,14 +441,12 @@ let rec get_last_dl_literals_rec (assignment : (constraint_n * bool * bool * int
 
 let get_last_dl_literals (assignment : (constraint_n * bool * bool * int) list) = 
     match (hd (rev assignment)) with
-    | (c, v, d, dl) -> get_last_dl_literals_rec assignment dl
-    | _ -> failwith "[Invalid argument] get_last_dl_literals";;
+    | (c, v, d, dl) -> get_last_dl_literals_rec assignment dl;;
 
 let rec find_backjump_clause_l (assignment : (constraint_n * bool * bool * int) list) formula clause ls = 
     match (is_still_conflict (ls @ (get_last_dl_literals assignment)) formula clause) with 
         | true -> ls @ (get_last_dl_literals assignment)
-        | false -> find_backjump_clause_l (tl assignment) formula clause (ls @ [(hd assignment)])
-        | _ -> failwith "[Invalid argument] find_backjump_clause";;
+        | false -> find_backjump_clause_l (tl assignment) formula clause (ls @ [(hd assignment)]);;
 
 let find_backjump_clause (assignment : (constraint_n * bool * bool * int) list) formula clause = Disjunction (transform_to_neg_clause (get_decision_literals (Assignment (find_backjump_clause_l (find_minimal_i assignment formula clause) formula clause []))));;
         
@@ -470,9 +469,9 @@ let rec get_decision_level (assignment : (constraint_n * bool * bool * int) list
                                                                     | 0 -> dl
                                                                     | _ -> get_decision_level xs literal
                                                                 )
+                                            | _ -> failwith "[Invalid argument] get_decision_level: argument not a literal"
                                        )
-                 )
-    | _ -> failwith "[Invalid argument] get_decision_level";;
+                 );;
 
 let get_current_decision_level assignment = 
     match assignment with 
@@ -480,8 +479,7 @@ let get_current_decision_level assignment =
         | Assignment (xs) -> (
                               match (hd (rev xs)) with
                                 | (c, v, d, dl) -> dl 
-                             )
-        | _ -> failwith "[Invalid argument] get_current_decision_level";;
+                             );;
 
 (* Backjump *)
 let rec backjump_rec assignment dl clause ls = 
@@ -507,32 +505,33 @@ let rec backjump_rec assignment dl clause ls =
                                                 | 0 -> backjump_rec (Assignment (xs)) dl clause (ls @ [(c, v, d, l)])
                                                 | -1 -> backjump_rec (Assignment (xs)) dl clause (ls @ [(c, v, d, l)])
                                                 | _ -> failwith "[Invalid argument] backjump_rec"
-                                             )
-        | _ -> failwith "[Invalid argument] backjump_rec";;
+                                             );;
 
 let backjump assignment formula = 
     (*printf "BACKJUMP\n\n";*) match assignment with 
         | Assignment (xs) -> let ys = (find_conflict assignment formula) in
-                                let (Disjunction (zs)) = (find_backjump_clause xs formula (hd ys)) in
-                                    (
-                                     match (length zs) with 
-                                        | 0 -> (Assignment (backjump_rec assignment
-                                                                          0
-                                                                          (Disjunction (zs))
-                                                                          []),
-                                                 Disjunction (zs))
-                                        | 1 -> (Assignment (backjump_rec assignment
-                                                                          0
-                                                                          (Disjunction (zs))
-                                                                          []),
-                                                 Disjunction (zs))
-                                        | _ ->  (Assignment (backjump_rec assignment
-                                                            (get_decision_level xs (hd (tl (rev zs)))) 
-                                                            (Disjunction (zs))
-                                                            []),
-                                                Disjunction (zs))
-                                    )
-        | _ -> failwith "[Invalid argument] backjump";;
+                                (
+                                 match (find_backjump_clause xs formula (hd ys)) with
+                                  | Disjunction (zs) -> (
+                                                        match (length zs) with 
+                                                            | 0 -> (Assignment (backjump_rec assignment
+                                                                                            0
+                                                                                            (Disjunction (zs))
+                                                                                            []),
+                                                                    Disjunction (zs))
+                                                            | 1 -> (Assignment (backjump_rec assignment
+                                                                                            0
+                                                                                            (Disjunction (zs))
+                                                                                            []),
+                                                                    Disjunction (zs))
+                                                            | _ ->  (Assignment (backjump_rec assignment
+                                                                                (get_decision_level xs (hd (tl (rev zs)))) 
+                                                                                (Disjunction (zs))
+                                                                                []),
+                                                                    Disjunction (zs))
+                                                        )
+                                  | _ -> failwith "[Invalid argument] backjump: find_backjump_clause did not return a clause"
+                                );;
 
 let rec backtrack_rec assignment dl ls =
     match assignment with
@@ -626,6 +625,7 @@ let rec dpll_rec assignment formula formula_opt dl =
                                          match bj_clause with 
                                             | Disjunction ([]) -> dpll_rec ys formula formula (get_current_decision_level ys)
                                             | Disjunction (zs) -> let formula_l = (learn formula bj_clause) in dpll_rec ys formula_l formula_l (get_current_decision_level ys)
+                                            | _ -> failwith "[Invalid argument] dpll_rec: backjump clause not a clause"
                                         )
                                   )
                         | false -> (
@@ -639,6 +639,7 @@ let rec dpll_rec assignment formula formula_opt dl =
                                                                          match bj_clause with
                                                                             | Disjunction ([]) -> dpll_rec ys formula formula (get_current_decision_level ys)
                                                                             | Disjunction (ws) -> let formula_l = (learn formula bj_clause) in dpll_rec ys formula_l formula_l (get_current_decision_level zs)
+                                                                            | _ -> failwith "[Invalid argument] dpll_rec: backjump clause not a clause"
                                                                         )
                                                                        )
                                                )
@@ -671,6 +672,7 @@ let rec dpll_inc_rec assignment formula formula_opt dl =
                                          match bj_clause with 
                                             | Disjunction ([]) -> dpll_inc_rec ys formula formula (get_current_decision_level ys)
                                             | Disjunction (zs) -> let formula_l = (learn formula bj_clause) in dpll_inc_rec ys formula_l formula_l (get_current_decision_level ys)
+                                            | _ -> failwith "[Invalid argument] dpll_inc_rec: backjump clause not a clause"
                                         )
                                   )
                         | false -> (
@@ -688,6 +690,7 @@ let rec dpll_inc_rec assignment formula formula_opt dl =
                                                                                                                                     match bj_clause with
                                                                                                                                         | Disjunction ([]) -> dpll_inc_rec ys formula formula (get_current_decision_level ys)
                                                                                                                                         | Disjunction (ws) -> let formula_l = (learn formula bj_clause) in dpll_inc_rec ys formula_l formula_l (get_current_decision_level zs)
+                                                                                                                                        | _ -> failwith "[Invalid argument] dpll_inc_rec: backjump clause not a clause"
                                                                                                                                     )
                                                                                                                                 )
                                                                                                         )
@@ -784,20 +787,25 @@ let rec choose_decision_literal assignment clause =
         | Disjunction ([]) -> failwith "[Invalid argument] choose_decision_literal: clause does not contain a literal suited for decision"
         | Disjunction (x :: xs) -> if is_assigned assignment x 
                                    then choose_decision_literal assignment (Disjunction (xs))
-                                   else x;;
+                                   else x
+        | _ -> failwith "[Invalid argument] choose_decision_literal: argument not a clause";;
 
 let rec decision_twl formula assignment f_map dl =
-    let Formula (Conjunction (cs)) = formula in 
-     match contains_unassigned_literal assignment (hd cs) with
-        | false -> decision_twl (Formula (Conjunction (tl cs))) assignment f_map dl
-        | true -> (
-                    let Assignment (xs) = assignment in
-                     match choose_decision_literal assignment (hd cs) with
-                        | Atom (x) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
-                                        (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, prop, conf)
-                        | Not (Atom (x)) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in
-                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, prop, conf) 
-                   );;
+    match formula with
+     | Formula (Conjunction (cs)) -> (
+                                    match contains_unassigned_literal assignment (hd cs) with
+                                        | false -> decision_twl (Formula (Conjunction (tl cs))) assignment f_map dl
+                                        | true -> (
+                                                    let Assignment (xs) = assignment in
+                                                    match choose_decision_literal assignment (hd cs) with
+                                                        | Atom (x) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
+                                                                        (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, prop, conf)
+                                                        | Not (Atom (x)) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in
+                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, prop, conf) 
+                                                        | _ -> failwith "[Invalid argument] decision_twl: choose_decision_literal did not return a literal"
+                                                )
+                                    )
+     | _ -> failwith "[Invalid argument] decision_twl: formula not in CNF";;
 
 let rec unit_propagation_twl assignment f_map prop dl = 
     (*printf "PROPAGATION\n\n";*) match prop with 
@@ -822,26 +830,28 @@ let rec unit_propagation_twl assignment f_map prop dl =
 
 let backjump_twl assignment formula conf = 
     (*printf "BACKJUMP\n\n";*) match assignment with 
-        | Assignment (xs) -> let (Disjunction (ys)) = (find_backjump_clause xs formula conf) in
-                                    (
-                                     match (length ys) with 
-                                        | 0 -> (Assignment (backjump_rec assignment
-                                                                          0
-                                                                          (Disjunction (ys))
-                                                                          []),
-                                                 Disjunction (ys))
-                                        | 1 -> (Assignment (backjump_rec assignment
-                                                                          0
-                                                                          (Disjunction (ys))
-                                                                          []),
-                                                 Disjunction (ys))
-                                        | _ ->  (Assignment (backjump_rec assignment
-                                                            (get_decision_level xs (hd (tl (rev ys)))) 
-                                                            (Disjunction (ys))
-                                                            []),
-                                                Disjunction (ys))
-                                    )
-        | _ -> failwith "[Invalid argument] backjump_twl";;
+        | Assignment (xs) -> (
+                              match (find_backjump_clause xs formula conf) with
+                                |(Disjunction (ys)) -> (
+                                                        match (length ys) with 
+                                                            | 0 -> (Assignment (backjump_rec assignment
+                                                                                            0
+                                                                                            (Disjunction (ys))
+                                                                                            []),
+                                                                    Disjunction (ys))
+                                                            | 1 -> (Assignment (backjump_rec assignment
+                                                                                            0
+                                                                                            (Disjunction (ys))
+                                                                                            []),
+                                                                    Disjunction (ys))
+                                                            | _ ->  (Assignment (backjump_rec assignment
+                                                                                (get_decision_level xs (hd (tl (rev ys)))) 
+                                                                                (Disjunction (ys))
+                                                                                []),
+                                                                    Disjunction (ys))
+                                                        )
+                                | _ -> failwith "[Invalid argument] backjump_twl: find_backjump_clause did not return a clause"
+                             );;
 
 (* How to use the map data structure: https://ocaml.org/learn/tutorials/map.html *)
 
@@ -862,6 +872,7 @@ let rec add_clause_keys clause m literals =
                                     match x with
                                         | Atom (y) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Not (Atom (y)))) [] m)) (literals @ [x])
                                         | Not (Atom (y)) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Atom (y))) [] m)) (literals @ [x])
+                                        | _ -> failwith "[Invalid argument] add_clause_keys: clause contains non-literals"
                                    )
         | _ -> failwith "[Invalid argument] add_clause_keys: formula not in CNF or contains unit clauses";;
 
@@ -893,7 +904,9 @@ let rec preprocess_unit_clauses_rec formula new_formula new_assignment prop =
                                                 | Disjunction (ys) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) (new_formula @ [x]) new_assignment prop
                                                 | Atom (y) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (prop @ [x])
                                                 | Not (Atom (y)) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (prop @ [x])
-                                             );;
+                                                | _ -> failwith "[Invalid argument] preprocess_unit_clauses_rec: formula not in CNF"
+                                             )
+        | _ -> failwith "[Invalid argument] preprocess_unit_clauses_rec: formula not in CNF";;
 
 let preprocess_unit_clauses (Assignment (assignment)) formula = preprocess_unit_clauses_rec formula [] assignment [];;
 
@@ -963,6 +976,7 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
                                                                             | (Disjunction ([]), false) -> dpll_twl_rec ys formula new_map literals (get_current_decision_level ys)
                                                                             | (Disjunction ([z]), false) -> dpll_twl_rec ys formula new_map literals (get_current_decision_level ys)
                                                                             | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_rec ys formula_l (add_clause_to_map new_map bj_clause) literals (get_current_decision_level ys)
+                                                                            | _ -> failwith "[Invalid argument] dpll_twl_rec: backjump clause is not a clause"
                                                                         )
                                                                    )
                                                     )
@@ -975,6 +989,7 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
                                             | (Disjunction ([]), false) -> dpll_twl_rec ys formula new_map literals (get_current_decision_level ys)
                                             | (Disjunction ([z]), false) -> dpll_twl_rec ys formula new_map literals (get_current_decision_level ys)
                                             | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_rec ys formula_l (add_clause_to_map new_map bj_clause) literals (get_current_decision_level ys)
+                                            | _ -> failwith "[Invalid argument] dpll_twl_rec: backjump clause is not a clause"
                                         )
                                      )
                                       
@@ -1026,7 +1041,8 @@ let rec clauselist_to_neg_clause_rec clauses result =
     match clauses with
         | [] -> Disjunction (result)
         | (Atom (x)) :: xs -> clauselist_to_neg_clause_rec xs (result @ [(Not (Atom (x)))])
-        | (Not (Atom (x))) :: xs -> clauselist_to_neg_clause_rec xs (result @ [(Atom (x))]);;
+        | (Not (Atom (x))) :: xs -> clauselist_to_neg_clause_rec xs (result @ [(Atom (x))])
+        | _ -> failwith "[Invalid argument] clauselist_to_neg_clause_rec: argument not a list of literals";;
 
 let clauselist_to_neg_clause clauses = clauselist_to_neg_clause_rec clauses [];;
 
@@ -1074,40 +1090,46 @@ let rec preprocess_unit_clauses_inc_rec formula new_formula new_assignment prop 
                                                                     else (
                                                                             preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (prop @ [x]) conf s_state i_map inv_map
                                                                         )
-                                             );;
+                                                | _ -> failwith "[Invalid argument] preprocess_unit_clauses_inc_rec: formula not in CNF"
+                                             )
+        | _ -> failwith "[Invalid argument] preprocess_unit_clauses_inc_rec: formula not in CNF";;
 
 let preprocess_unit_clauses_inc (Assignment (assignment)) formula s_state i_map inv_map = preprocess_unit_clauses_inc_rec formula [] assignment [] false s_state i_map inv_map;;
 
 let rec decision_twl_inc formula assignment f_map s_state i_map inv_map dl =
-    let Formula (Conjunction (cs)) = formula in 
-     match contains_unassigned_literal assignment (hd cs) with
-        | false -> decision_twl_inc (Formula (Conjunction (tl cs))) assignment f_map s_state i_map inv_map dl
-        | true -> (
-                    let Assignment (xs) = assignment in
-                     match choose_decision_literal assignment (hd cs) with
-                        | Atom (x) -> if is_proper_constraint x
-                                      then (
-                                            match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n x) i_map))) s_state with
-                                                | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core unsat_core inv_map)
-                                                | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
-                                                                    (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf)
-                                           )
-                                      else (  
-                                            let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
-                                                (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, s_state, prop, conf)
-                                           )
-                        | Not (Atom (x)) -> if is_proper_constraint x
-                                            then (
-                                                  match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n x) i_map))) s_state with
-                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core unsat_core inv_map)
-                                                    | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in 
-                                                                            (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf)
-                                                 )
-                                            else (
-                                                  let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in
-                                                    (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, s_state, prop, conf) 
-                                                 )
-                   );;
+    match formula with
+     | Formula (Conjunction (cs)) -> ( 
+                                    match contains_unassigned_literal assignment (hd cs) with
+                                        | false -> decision_twl_inc (Formula (Conjunction (tl cs))) assignment f_map s_state i_map inv_map dl
+                                        | true -> (
+                                                    let Assignment (xs) = assignment in
+                                                    match choose_decision_literal assignment (hd cs) with
+                                                        | Atom (x) -> if is_proper_constraint x
+                                                                    then (
+                                                                            match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n x) i_map))) s_state with
+                                                                                | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core unsat_core inv_map)
+                                                                                | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
+                                                                                                    (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf)
+                                                                        )
+                                                                    else (  
+                                                                            let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
+                                                                                (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, s_state, prop, conf)
+                                                                        )
+                                                        | Not (Atom (x)) -> if is_proper_constraint x
+                                                                            then (
+                                                                                match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n x) i_map))) s_state with
+                                                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core unsat_core inv_map)
+                                                                                    | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in 
+                                                                                                            (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf)
+                                                                                )
+                                                                            else (
+                                                                                let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in
+                                                                                    (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, s_state, prop, conf) 
+                                                                                )
+                                                        | _ -> failwith "[Invalid argument] decision_twl_inc: choose_decision_literal did not return a literal"
+                                                )
+                                     )
+     | _ -> failwith "[Invalid argument] decision_twl_inc: formula not in CNF";;
 
 let rec unit_propagation_twl_inc assignment f_map s_state i_map inv_map prop dl = 
     (*printf "PROPAGATION\n\n";*) match prop with 
@@ -1190,6 +1212,7 @@ let rec dpll_twl_inc_rec assignment formula f_map s_state checkpoints i_map inv_
                                                                                                     match (hd (convert_unsat_core unsat_core inv_map)) with
                                                                                                         | Atom (y) -> restart_twl_inc_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y false
                                                                                                         | Not (Atom (y)) -> restart_twl_inc_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
+                                                                                                        | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: unsat_core does not consist of literals"
                                                                                                    )
                                                                                             | _ -> let ys = clauselist_to_neg_clause (convert_unsat_core unsat_core inv_map) in 
                                                                                                     printf "restart\n\n"; restart_twl_inc assignment (learn formula ys) (add_clause_to_map n_map ys) r_state [hd (checkpoints)] i_map inv_map
@@ -1207,6 +1230,7 @@ let rec dpll_twl_inc_rec assignment formula f_map s_state checkpoints i_map inv_
                                                                             | (Disjunction ([]), false) -> dpll_twl_inc_rec ys formula new_map b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
                                                                             | (Disjunction ([z]), false) -> dpll_twl_inc_rec ys formula new_map b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
                                                                             | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_rec ys formula_l (add_clause_to_map new_map bj_clause) b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                                                            | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
                                                                         )
                                                                    )
                                                     )
@@ -1222,6 +1246,7 @@ let rec dpll_twl_inc_rec assignment formula f_map s_state checkpoints i_map inv_
                                             | (Disjunction ([]), false) -> dpll_twl_inc_rec ys formula new_map b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
                                             | (Disjunction ([z]), false) -> dpll_twl_inc_rec ys formula new_map b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
                                             | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_rec ys formula_l (add_clause_to_map new_map bj_clause) b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                            | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
                                         )
                                      )
                                       
@@ -1280,8 +1305,13 @@ let sat_inc (formula, cs, i_map, inv_map) =
 
 (****************************************************************************************************)
 
-let sat formula = 
+let sat_twl formula = 
     match (dpll_twl formula) with
+        | true -> printf "SAT\n"
+        | false -> printf "UNSAT\n";; 
+
+let sat formula = 
+    match (dpll formula) with
         | true -> printf "SAT\n"
         | false -> printf "UNSAT\n";; 
                                
