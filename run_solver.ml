@@ -20,6 +20,8 @@ let rec parse lexbuf option =
     match parse_with_error lexbuf with
         | Some value -> (
                          match option with
+                            | "indexed" -> let (f, cs, i_map, inv_map) = (Util.time Tseitin.tseitin_transformation_inc_i value) in
+                                                Util.time Solver.sat_inc_i (f, cs, i_map, inv_map)
                             | "incremental" -> let (f, cs, i_map, inv_map) = (Util.time Tseitin.tseitin_transformation_inc value) in
                                                 Util.time Solver.sat_inc (f, cs, i_map, inv_map)
                             | "twl" -> Util.time Solver.sat_twl (Util.time Tseitin.tseitin_transformation value)

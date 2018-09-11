@@ -1,4 +1,6 @@
 _build/
 testdata/
+gmon.out
 run_solver.native
+run_solver.p.native
 IA_Checker.ml

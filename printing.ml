@@ -28,6 +28,7 @@ let print_constraint_n c =
     match c with
         | Constraint (x) ->  "Constraint (" ^ (print_less_equal x) ^ ")"  
         | AuxVar (x) -> "AuxVar (" ^ (string_of_int x) ^ ")"      
+        | Index (x) -> "Index (" ^ (string_of_int x) ^ ")"
         | _ -> failwith "[Invalid formula]: print_constraint_n"
 
 let rec print_element_list el = 
