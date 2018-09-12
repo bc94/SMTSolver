@@ -33,6 +33,20 @@ let rec is_assigned_i (assignment : assignment) (literal : element) =
         | Assignment ([]) -> false
         | Assignment (x :: xs) -> (
                                    match (x, literal) with 
+                                    | ((Index (_), _, _, _), Atom (AuxVar (_))) -> is_assigned_i (Assignment xs) literal
+                                    | ((Index (_), _, _,_ ), Not (Atom (AuxVar (_)))) -> is_assigned_i (Assignment xs) literal
+                                    | ((AuxVar (_), _, _, _), Atom (Index (_))) -> is_assigned_i (Assignment xs) literal
+                                    | ((AuxVar (_), _, _, _), Not (Atom (Index (_)))) -> is_assigned_i (Assignment xs) literal
+                                    | ((AuxVar (y), b, d, dl), Atom (AuxVar (z))) -> (
+                                                                                    match (compare y z) with
+                                                                                        | 0 -> true
+                                                                                        | _ -> is_assigned_i (Assignment xs) literal
+                                                                                     )
+                                    | ((AuxVar (y), b, d, dl), Not (Atom (AuxVar (z)))) -> (
+                                                                                            match (compare y z) with
+                                                                                                | 0 -> true
+                                                                                                | _ -> is_assigned_i (Assignment xs) literal
+                                                                                           )
                                     | ((Index (y), b, d, dl), Atom (Index (z))) -> ( 
                                                                     match (compare y z) with
                                                                     | 0 -> true
@@ -71,6 +85,22 @@ let rec is_true_i (assignment : assignment) (literal : element) =
         | Assignment ([]) -> false
         | Assignment (x :: xs) -> (
                                    match (x, literal) with 
+                                    | ((AuxVar (_), _, _, _), Atom (Index (_))) -> is_true_i (Assignment xs) literal
+                                    | ((AuxVar (_), _, _, _), Not (Atom (Index (_)))) -> is_true_i (Assignment xs) literal
+                                    | ((Index (_), _, _, _), Atom (AuxVar (_))) -> is_true_i (Assignment xs) literal
+                                    | ((Index (_), _, _, _), Not (Atom (AuxVar (_)))) -> is_true_i (Assignment xs) literal
+                                    | ((AuxVar (y), true, d, dl), Atom (AuxVar (z))) -> (
+                                                                                         match (compare y z) with
+                                                                                            | 0 -> true
+                                                                                            | _ -> is_true_i (Assignment xs) literal
+                                                                                        )
+                                    | ((AuxVar (y), false, d, dl), Not (Atom (AuxVar (z)))) -> (
+                                                                                                match (compare y z) with
+                                                                                                    | 0 -> true
+                                                                                                    | _ -> is_true_i (Assignment xs) literal
+                                                                                               )
+                                    | ((AuxVar (y), true, d, dl), Not (Atom (AuxVar (z)))) -> is_true_i (Assignment xs) literal
+                                    | ((AuxVar (y), false, d, dl), Atom (AuxVar (z))) -> is_true_i (Assignment xs) literal
                                     | ((Index (y), true, d, dl), Atom (Index (z))) -> ( 
                                                                        match (compare y z) with 
                                                                         | 0 -> true
@@ -83,7 +113,7 @@ let rec is_true_i (assignment : assignment) (literal : element) =
                                                                                 | _ -> is_true_i (Assignment xs) literal
                                                                              )   
                                     | ((Index (y), false, d, dl), Atom (Index (z))) -> is_true_i (Assignment xs) literal
-                                    | _ -> failwith "[Invalid argument] is_true_i: second argument not a literal or non_indexed representation is used"
+                                    | _ -> failwith "[Invalid argument] is_true_i: second argument not a literal or non-indexed representation is used"
                                   );;    
 
 
@@ -276,8 +306,24 @@ let rec find_conflict assignment formula =
         (* Empty list in middle of conjunction possible? if so, another case is needed *)
         | _ -> failwith "[Invalid argument] find_conflict";;
 
+let rec find_conflict_i assignment formula =
+    match formula with
+        | Formula (Conjunction ([])) -> []
+        | Formula (Conjunction (x :: xs)) -> (
+                                              match (unassigned_or_true_i assignment x) with 
+                                                | [] -> (* printf "CONFLICT: %s\n\n" (Printing.print_element x); *) [x]
+                                                | y :: ys -> find_conflict_i assignment (Formula (Conjunction (xs)))   
+                                             )
+        (* Empty list in middle of conjunction possible? if so, another case is needed *)
+        | _ -> failwith "[Invalid argument] find_conflict";;
+
 let conflict_exists assignment formula = 
     match (find_conflict assignment formula) with 
+        | [] -> false
+        | x :: xs -> true;;
+
+let conflict_exists_i assignment formula = 
+    match (find_conflict_i assignment formula) with 
         | [] -> false
         | x :: xs -> true;;
 
@@ -522,6 +568,15 @@ let rec is_still_conflict (assignment : (constraint_n * bool * bool * int) list)
                         | [] -> true 
                         | y :: ys -> false
                      );;
+                
+let rec is_still_conflict_i (assignment : (constraint_n * bool * bool * int) list) formula clause =
+    match assignment with
+        | [] -> false 
+        | x :: xs -> (
+                      match (unassigned_or_true_i (Assignment (assignment)) clause) with
+                        | [] -> true 
+                        | y :: ys -> false
+                     );;
 
 let rec find_minimal_i_l (assignment : (constraint_n * bool * bool * int) list) formula clause ls =
     match (is_still_conflict ls formula clause) with
@@ -529,6 +584,13 @@ let rec find_minimal_i_l (assignment : (constraint_n * bool * bool * int) list) 
         | false -> find_minimal_i_l (tl assignment) formula clause (ls @ [(hd assignment)]);;
 
 let find_minimal_i (assignment : (constraint_n * bool * bool * int) list) formula clause = find_minimal_i_l assignment formula clause [];;
+
+let rec find_minimal_i_l_indexed (assignment : (constraint_n * bool * bool * int) list) formula clause ls =
+    match (is_still_conflict_i ls formula clause) with
+        | true -> ls
+        | false -> find_minimal_i_l_indexed (tl assignment) formula clause (ls @ [(hd assignment)]);;
+
+let find_minimal_i_indexed (assignment : (constraint_n * bool * bool * int) list) formula clause = find_minimal_i_l_indexed assignment formula clause [];;
 
 let rec transform_to_neg_clause assignment =
     match assignment with 
@@ -556,6 +618,13 @@ let rec find_backjump_clause_l (assignment : (constraint_n * bool * bool * int) 
 
 let find_backjump_clause (assignment : (constraint_n * bool * bool * int) list) formula clause = Disjunction (transform_to_neg_clause (get_decision_literals (Assignment (find_backjump_clause_l (find_minimal_i assignment formula clause) formula clause []))));;
         
+let rec find_backjump_clause_l_i (assignment : (constraint_n * bool * bool * int) list) formula clause ls = 
+    match (is_still_conflict_i (ls @ (get_last_dl_literals assignment)) formula clause) with 
+        | true -> ls @ (get_last_dl_literals assignment)
+        | false -> find_backjump_clause_l_i (tl assignment) formula clause (ls @ [(hd assignment)]);;
+
+let find_backjump_clause_i (assignment : (constraint_n * bool * bool * int) list) formula clause = Disjunction (transform_to_neg_clause (get_decision_literals (Assignment (find_backjump_clause_l_i (find_minimal_i_indexed assignment formula clause) formula clause []))));;
+
 (* Get target decision level for backjumping. *)
 (* Relies on increasing order of decision levels in the assignment *)
 let rec get_decision_level (assignment : (constraint_n * bool * bool * int) list) literal = 
@@ -577,6 +646,45 @@ let rec get_decision_level (assignment : (constraint_n * bool * bool * int) list
                                                                 )
                                             | _ -> failwith "[Invalid argument] get_decision_level: argument not a literal"
                                        )
+                 );;
+
+let rec get_decision_level_i (assignment : (constraint_n * bool * bool * int) list) literal = 
+    match assignment with
+    | [] -> failwith "[Invalid argument] get_decision_level: literal not in assignment list"
+    | x :: xs -> (
+                  match (x) with
+                    | (Index (i1), v, d, dl) -> (
+                                        match literal with 
+                                            | Atom (Index (i2)) -> (
+                                                                    match (compare i1 i2) with 
+                                                                        | 0 -> dl
+                                                                        | _ -> get_decision_level_i xs literal
+                                                                   )
+                                            | Not (Atom (Index (i2))) -> (
+                                                                          match (compare i1 i2) with 
+                                                                            | 0 -> dl
+                                                                            | _ -> get_decision_level_i xs literal
+                                                                         )
+                                            | Atom (AuxVar (_)) -> get_decision_level_i xs literal
+                                            | Not (Atom (AuxVar (_))) -> get_decision_level_i xs literal
+                                            | _ -> failwith "[Invalid argument] get_decision_level_i: argument not a literal or not in index representation"
+                                       )
+                    | (AuxVar (i1), v, d, dl) -> (
+                                                  match literal with
+                                                    | Atom (AuxVar (i2)) -> (
+                                                                    match (compare i1 i2) with 
+                                                                        | 0 -> dl
+                                                                        | _ -> get_decision_level_i xs literal
+                                                                   )
+                                                    | Not (Atom (AuxVar (i2))) -> (
+                                                                          match (compare i1 i2) with 
+                                                                            | 0 -> dl
+                                                                            | _ -> get_decision_level_i xs literal
+                                                                         )
+                                                    | Atom (Index (_)) -> get_decision_level_i xs literal
+                                                    | Not (Atom (Index (_))) -> get_decision_level_i xs literal
+                                                 )
+                    | _ -> failwith "[Invalid argument] get_decision_level_i: Indexed variant used with non-index representation"
                  );;
 
 let get_current_decision_level assignment = 
@@ -1038,6 +1146,31 @@ let backjump_twl assignment formula conf =
                                 | _ -> failwith "[Invalid argument] backjump_twl: find_backjump_clause did not return a clause"
                              );;
 
+let backjump_twl_i assignment formula conf = 
+    (*printf "BACKJUMP\n\n";*) match assignment with 
+        | Assignment (xs) -> (
+                              match (find_backjump_clause_i xs formula conf) with
+                                |(Disjunction (ys)) -> (
+                                                        match (length ys) with 
+                                                            | 0 -> (Assignment (backjump_rec assignment
+                                                                                            0
+                                                                                            (Disjunction (ys))
+                                                                                            []),
+                                                                    Disjunction (ys))
+                                                            | 1 -> (Assignment (backjump_rec assignment
+                                                                                            0
+                                                                                            (Disjunction (ys))
+                                                                                            []),
+                                                                    Disjunction (ys))
+                                                            | _ ->  (Assignment (backjump_rec assignment
+                                                                                (get_decision_level_i xs (hd (tl (rev ys)))) 
+                                                                                (Disjunction (ys))
+                                                                                []),
+                                                                    Disjunction (ys))
+                                                        )
+                                | _ -> failwith "[Invalid argument] backjump_twl: find_backjump_clause did not return a clause"
+                             );;
+
 (* How to use the map data structure: https://ocaml.org/learn/tutorials/map.html *)
 
 let rec construct_watch_lists formula m = 
@@ -1232,7 +1365,7 @@ let rec convert_unsat_core_i_rec unsat_core inv_map result =
                         | (y, false, _, _) -> convert_unsat_core_rec xs inv_map (result @ [(Not (Atom (Index i)))])
                      );;
 
-let convert_unsat_core_i unsat_core inv_map = convert_unsat_core_rec_i unsat_core inv_map [];;
+let convert_unsat_core_i unsat_core inv_map = convert_unsat_core_i_rec unsat_core inv_map [];;
 
 let rec clauselist_to_neg_clause_rec clauses result = 
     match clauses with
@@ -1325,7 +1458,8 @@ let rec preprocess_unit_clauses_inc_i_rec formula new_formula new_assignment pro
                                                                                                     | Inr (n_state) -> preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (prop @ [x]) conf n_state i_map inv_map
                                                                                                )
                                                                            | Index (z) -> (
-                                                                                           match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Tseitin.Inv_Map.find z inv_map)) i_map))) s_state with
+                                                                                           let (c, v, d, dl) = (Tseitin.Inv_Map.find z inv_map) in
+                                                                                           match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Printing.print_constraint_n c)) i_map))) s_state with
                                                                                                 | Inl (unsat_core) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), prop, true, s_state)
                                                                                                 | Inr (n_state) -> preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (prop @ [x]) conf n_state i_map inv_map
                                                                                           )
@@ -1412,7 +1546,8 @@ let rec decision_twl_inc_i formula assignment f_map s_state i_map inv_map dl =
                                                                                                                                 (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf) 
                                                                                                         )
                                                                                     | Index (y) -> (
-                                                                                                    match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Tseitin.Inv_Map.find z inv_map)) i_map))) s_state with
+                                                                                                    let (c, v, d, dl) = (Tseitin.Inv_Map.find y inv_map) in 
+                                                                                                    match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map))) s_state with
                                                                                                         | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core inv_map)
                                                                                                         | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Atom (x)) in 
                                                                                                                                 (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf) 
@@ -1526,7 +1661,8 @@ let rec unit_propagation_twl_inc_i assignment f_map s_state i_map inv_map prop d
                                                                                                     )
                                                                             )
                                                         | Index (z) -> (
-                                                                        match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Tseitin.Inv_Map.find z inv_map)) i_map))) s_state with
+                                                                        let (c, v, d, dl) = (Tseitin.Inv_Map.find z inv_map) in 
+                                                                        match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Printing.print_constraint_n c)) i_map))) s_state with
                                                                             | Inl (unsat_core) -> (assignment, f_map, s_state, convert_unsat_core_i (unsat_core) inv_map)
                                                                             | Inr (n_state) -> let (new_map, new_prop, conf) = update_watch_lists_i assignment f_map (Atom (y)) in 
                                                                                                 ( 
@@ -1666,13 +1802,13 @@ and restart_twl_inc_unit assignment formula f_map s_state checkpoints i_map inv_
                                  );;
 
 let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map inv_map dl = 
-    (*Printing.print_assignment assignment; printf "\n\n";*) match model_found_twl_i assignment formula with
+    Printing.print_assignment assignment; printf "\n\n"; match model_found_twl_i assignment formula with
         | true -> (
                    (*Printing.print_assignment assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*) 
                    match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) s_state with
                     | Simplex_inc.Inl (unsat_core) -> let (num, cp) = hd (checkpoints) in
                                                       let r_state = Simplex_inc.backtrack_simplex cp s_state in
-                                                       let ys = clauselist_to_neg_clause_i (convert_unsat_core_i unsat_core inv_map) in 
+                                                       let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core inv_map) in 
                                                         printf "restart\n\n";
                                                         restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map f_map ys) r_state [hd (checkpoints)] i_map inv_map
                     | Simplex_inc.Inr (n_state) -> (* According to my understanding this is sufficient info to determine that formula is SAT *)
@@ -1701,7 +1837,7 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
                                                                                                         | Not (Atom (y)) -> restart_twl_inc_i_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
                                                                                                         | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: unsat_core does not consist of literals"
                                                                                                    )
-                                                                                            | _ -> let ys = clauselist_to_neg_clause_i (convert_unsat_core_i unsat_core inv_map) in 
+                                                                                            | _ -> let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core inv_map) in 
                                                                                                     printf "restart\n\n"; restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map n_map ys) r_state [hd (checkpoints)] i_map inv_map
                                                                                           )
                                                                     | Inr (state) -> dpll_twl_inc_i_rec n_assignment formula n_map state new_cps i_map inv_map new_dl
@@ -1755,7 +1891,7 @@ and dpll_twl_inc_i formula i_map inv_map s_state checkpoints =
                             )
 
 and restart_twl_inc_i assignment formula f_map s_state checkpoints i_map inv_map = 
-                        let (new_formula, new_assignment, prop, conf_unit, new_state) = preprocess_unit_clauses_inc_i (preserve_unit_assignments_i assignment) formula s_state i_map inv_map in 
+                        let (new_formula, new_assignment, prop, conf_unit, new_state) = preprocess_unit_clauses_inc_i (preserve_unit_assignments assignment) formula s_state i_map inv_map in 
                             if conf_unit
                             then false
                             else (
@@ -1770,7 +1906,7 @@ and restart_twl_inc_i assignment formula f_map s_state checkpoints i_map inv_map
                                                 
 (* TODO: check if correct when everything else is done *)
 and restart_twl_inc_i_unit assignment formula f_map s_state checkpoints i_map inv_map unit_literal lit_val = 
-                        let (new_formula, new_assignment, prop, conf_unit, new_state) = preprocess_unit_clauses_inc_i (preserve_unit_assignments_i assignment) formula s_state i_map inv_map in
+                        let (new_formula, new_assignment, prop, conf_unit, new_state) = preprocess_unit_clauses_inc_i (preserve_unit_assignments assignment) formula s_state i_map inv_map in
                             if conf_unit
                             then false
                             else (
