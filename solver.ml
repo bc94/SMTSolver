@@ -1802,8 +1802,9 @@ and restart_twl_inc_unit assignment formula f_map s_state checkpoints i_map inv_
                                  );;
 
 let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map inv_map dl = 
-    Printing.print_assignment assignment; printf "\n\n"; match model_found_twl_i assignment formula with
+    (* Printing.print_assignment assignment; printf "\n\n"; *) match model_found_twl_i assignment formula with
         | true -> (
+                   printf "test\n\n";
                    (*Printing.print_assignment assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*) 
                    match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) s_state with
                     | Simplex_inc.Inl (unsat_core) -> let (num, cp) = hd (checkpoints) in
@@ -1877,7 +1878,7 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
 
 and dpll_twl_inc_i formula i_map inv_map s_state checkpoints = 
                 let (new_formula, new_assignment, prop, conf_unit, new_state) = preprocess_unit_clauses_inc_i (Assignment ([])) formula s_state i_map inv_map in 
-                        (*Printing.print_formula new_formula; printf "\n\n";*) 
+                        (* Printing.print_formula new_formula; printf "\n\n"; *)
                         if conf_unit 
                         then false
                         else (
@@ -1921,6 +1922,7 @@ and restart_twl_inc_i_unit assignment formula f_map s_state checkpoints i_map in
 
 let sat_inc_i (formula, cs, i_map, inv_map) =
    let (tableau, cs) = (Util.to_simplex_format_inc_init cs i_map) in
+    Printing.print_simplex_constraints_inc tableau;
     let state = Simplex_inc.init_simplex Simplex_inc.linorder_nat tableau in
     match (dpll_twl_inc_i formula i_map inv_map state [(-1, Simplex_inc.checkpoint_simplex state)]) with
         | true -> printf "SAT\n"

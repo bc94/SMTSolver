@@ -23,6 +23,7 @@ module Simplex_inc : sig
   val lrv_QDelta : qDelta lrv
   val equal_QDelta : qDelta equal
   val integer_of_nat : nat -> Big_int.big_int
+  val integer_of_int : int -> Big_int.big_int
   val lp_monom : rat -> nat -> linear_poly
   val rat_of_int_pair : Big_int.big_int -> Big_int.big_int -> rat
   val nat_of_integer : Big_int.big_int -> nat

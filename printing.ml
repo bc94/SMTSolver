@@ -1,6 +1,7 @@
 open String
 open Types
 open Simplex
+open Simplex_inc
 open Big_int
 open Core.Std
 
@@ -65,6 +66,11 @@ let rec fmaplist_to_string l =
         | [] -> ""
         | ((Simplex.Nat n), (Simplex.Frct (x, y))) :: xs -> " + (" ^ (string_of_int (int_of_big_int (Simplex.integer_of_int x))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex.integer_of_int y))) ^ ") * " ^ (string_of_int (int_of_big_int n)) ^ (fmaplist_to_string xs);;
 
+let rec fmaplist_to_string_inc l =
+    match l with
+        | [] -> ""
+        | ((Simplex_inc.Nat n), (Simplex_inc.Frct (x, y))) :: xs -> " + (" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int x))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int y))) ^ ") * " ^ (string_of_int (int_of_big_int n)) ^ (fmaplist_to_string_inc xs);;
+
 let rec print_simplex_constraints_rec constraints = 
     match constraints with
         | [] -> "\n";
@@ -79,3 +85,18 @@ let rec print_simplex_constraints_rec constraints =
         | _ -> failwith "[Invalid argument] print_simplex_constraints";;
 
 let print_simplex_constraints constraints = printf "Simplex constraints: \n%s\n" (print_simplex_constraints_rec constraints);;
+
+let rec print_simplex_constraints_inc_rec constraints = 
+    match constraints with
+        | [] -> "\n";
+        | (x, Simplex_inc.LEQ ((Simplex_inc.LinearPoly (Simplex_inc.Fmap_of_list (((Simplex_inc.Nat n), (Simplex_inc.Frct (x1, y1))) :: ns))), (Simplex_inc.Frct (x2, y2)))) :: cs -> 
+                        "((" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int x1))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int y1))) ^ ") * " ^ (string_of_int (int_of_big_int n)) ^ fmaplist_to_string_inc ns ^ " <= (" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int x2))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int y2))) ^ "))\n" ^ print_simplex_constraints_inc_rec cs
+        | (x, Simplex_inc.GEQ ((Simplex_inc.LinearPoly (Simplex_inc.Fmap_of_list (((Simplex_inc.Nat n), (Simplex_inc.Frct (x1, y1))) :: ns))), (Simplex_inc.Frct (x2, y2)))) :: cs ->
+                        "((" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int x1))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int y1))) ^ ") * " ^ (string_of_int (int_of_big_int n)) ^ fmaplist_to_string_inc ns ^ " >= (" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int x2))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int y2))) ^ "))\n" ^ print_simplex_constraints_inc_rec cs
+        | (x, Simplex_inc.LEQPP ((Simplex_inc.LinearPoly (Simplex_inc.Fmap_of_list (((Simplex_inc.Nat n1), (Simplex_inc.Frct (x1, y1))) :: n1s))), (Simplex_inc.LinearPoly (Simplex_inc.Fmap_of_list (((Simplex_inc.Nat n2), (Simplex_inc.Frct (x2, y2))) :: n2s))))) :: cs ->
+                        "((" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int x1))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int y1))) ^ ") * " ^ (string_of_int (int_of_big_int n1)) ^ fmaplist_to_string_inc n1s ^ " <= (" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int x2))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int y2))) ^ ") * " ^ (string_of_int (int_of_big_int n2)) ^ fmaplist_to_string_inc n2s ^ ")\n" ^ print_simplex_constraints_inc_rec cs
+        | (x, Simplex_inc.GTPP ((Simplex_inc.LinearPoly (Simplex_inc.Fmap_of_list (((Simplex_inc.Nat n1), (Simplex_inc.Frct (x1, y1))) :: n1s))), (Simplex_inc.LinearPoly (Simplex_inc.Fmap_of_list (((Simplex_inc.Nat n2), (Simplex_inc.Frct (x2, y2))) :: n2s))))) :: cs -> 
+                        "((" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int x1))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int y1))) ^ ") * " ^ (string_of_int (int_of_big_int n1)) ^ fmaplist_to_string_inc n1s ^ " > (" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int x2))) ^ "/" ^ (string_of_int (int_of_big_int (Simplex_inc.integer_of_int y2))) ^ ") * " ^ (string_of_int (int_of_big_int n2)) ^ fmaplist_to_string_inc n2s ^ ")\n" ^ print_simplex_constraints_inc_rec cs
+        | _ -> failwith "[Invalid argument] print_simplex_constraints";;
+
+let print_simplex_constraints_inc constraints = printf "Simplex constraints: \n%s\n" (print_simplex_constraints_inc_rec constraints);;

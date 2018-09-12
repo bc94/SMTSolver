@@ -310,13 +310,27 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last =
                                                         )
                                        )
                               )
-        | Atom (x) -> ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (Index i)])] @ 
-                       [Disjunction ([Not (Atom (Index i)); Atom (AuxVar n_aux)])],
-                       n_last,
-                       (cs @ [(x, true, false, 0)] @ [(x, false, false, 0)]),
-                       (Index_Map.add ("-" ^ Printing.print_constraint_n x) (i + 1) (Index_Map.add (Printing.print_constraint_n x) i (i_map))),
-                       (Inv_Map.add (i + 1) (x, false, false, 0) (Inv_Map.add i (x, true, false, 0) inv_map)),
-                       i + 2)
+        | Atom (x) -> let s = (Printing.print_constraint_n x) in 
+                        if Index_Map.mem s i_map 
+                        then (
+                              let ind = (Index_Map.find s i_map) in
+                                ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (Index ind)])] @ 
+                                [Disjunction ([Not (Atom (Index ind)); Atom (AuxVar n_aux)])],
+                                n_last,
+                                cs,
+                                i_map,
+                                inv_map,
+                                i)
+                             )
+                        else (
+                              ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (Index i)])] @ 
+                               [Disjunction ([Not (Atom (Index i)); Atom (AuxVar n_aux)])],
+                               n_last,
+                               (cs @ [(x, true, false, 0)] @ [(x, false, false, 0)]),
+                               (Index_Map.add ("-" ^ Printing.print_constraint_n x) (i + 1) (Index_Map.add (Printing.print_constraint_n x) i (i_map))),
+                               (Inv_Map.add (i + 1) (x, false, false, 0) (Inv_Map.add i (x, true, false, 0) inv_map)),
+                               i + 2)
+                             )
         | _ -> failwith "[Invalid argument]: transform_elem_inc";;
 
 let tseitin_transformation_inc_n_i f n_aux n_last = 
