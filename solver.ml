@@ -1355,17 +1355,18 @@ let rec convert_unsat_core_rec unsat_core inv_map result =
 
 let convert_unsat_core unsat_core inv_map = convert_unsat_core_rec unsat_core inv_map [];;
 
-let rec convert_unsat_core_i_rec unsat_core inv_map result =
+(* TODO: fix *)
+let rec convert_unsat_core_i_rec unsat_core i_map inv_map result =
     match unsat_core with
         | [] -> result
         | x :: xs -> (
                       let i = (int_of_big_int (Simplex_inc.integer_of_nat x)) in
                        match (Tseitin.Inv_Map.find i inv_map) with
-                        | (y, true, _, _) -> convert_unsat_core_rec xs inv_map (result @ [(Atom (Index i))])
-                        | (y, false, _, _) -> convert_unsat_core_rec xs inv_map (result @ [(Not (Atom (Index i)))])
+                        | (y, true, _, _) -> convert_unsat_core_i_rec xs i_map inv_map (result @ [(Atom (Index (Tseitin.Index_Map.find (Printing.print_constraint_n y) i_map)))])
+                        | (y, false, _, _) -> convert_unsat_core_i_rec xs i_map inv_map (result @ [(Not (Atom (Index (Tseitin.Index_Map.find (Printing.print_constraint_n y) i_map))))])
                      );;
 
-let convert_unsat_core_i unsat_core inv_map = convert_unsat_core_i_rec unsat_core inv_map [];;
+let convert_unsat_core_i unsat_core i_map inv_map = convert_unsat_core_i_rec unsat_core i_map inv_map [];;
 
 let rec clauselist_to_neg_clause_rec clauses result = 
     match clauses with
@@ -1516,19 +1517,22 @@ let rec decision_twl_inc_i formula assignment f_map s_state i_map inv_map dl =
                                         | true -> (
                                                     let Assignment (xs) = assignment in
                                                     match choose_decision_literal_i assignment (hd cs) with
-                                                        | Atom (x) -> if is_proper_constraint x
+                                                        | Atom (x) -> (*printf "decision literal: %s\n\n" (Printing.print_constraint_n x);*)
+                                                                    if is_proper_constraint x
                                                                     then (
                                                                           match x with 
                                                                             | Constraint (y) -> (
                                                                                                  match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n x) i_map))) s_state with
-                                                                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core inv_map)
+                                                                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map)
                                                                                                     | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (x))) in 
                                                                                                                             (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf)
                                                                                                 )   
                                                                             | Index (y) -> (
+                                                                                            let (s, v, d, tmp_dl) = (Tseitin.Inv_Map.find y inv_map) in
+                                                                                            (*printf ("decision, atom: %s\n") (Printing.print_constraint_n s);*)
                                                                                             match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int y)) s_state with
-                                                                                                | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core inv_map)
-                                                                                                | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (x))) in 
+                                                                                                | Inl (unsat_core) -> (*printf "unsat_core\n";*) (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map)
+                                                                                                | Inr (n_state) -> (*printf "state\n";*) let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (x))) in 
                                                                                                                         (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf)
                                                                                            )   
                                                                         )
@@ -1536,20 +1540,22 @@ let rec decision_twl_inc_i formula assignment f_map s_state i_map inv_map dl =
                                                                             let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (x))) in 
                                                                                 (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, s_state, prop, conf)
                                                                         )
-                                                        | Not (Atom (x)) -> if is_proper_constraint x
+                                                        | Not (Atom (x)) -> (*printf "decision literal: Not %s\n\n" (Printing.print_constraint_n x);*) 
+                                                                            if is_proper_constraint x
                                                                             then (
                                                                                   match x with
                                                                                     | Constraint (y) -> (
                                                                                                         match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n x) i_map))) s_state with
-                                                                                                            | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core inv_map)
+                                                                                                            | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map)
                                                                                                             | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Atom (x)) in 
                                                                                                                                 (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf) 
                                                                                                         )
                                                                                     | Index (y) -> (
-                                                                                                    let (c, v, d, dl) = (Tseitin.Inv_Map.find y inv_map) in 
+                                                                                                    let (c, v, d, tmp_dl) = (Tseitin.Inv_Map.find y inv_map) in 
+                                                                                                    (*printf ("decision, not atom: %s\n") (Printing.print_constraint_n c);*)
                                                                                                     match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map))) s_state with
-                                                                                                        | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core inv_map)
-                                                                                                        | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Atom (x)) in 
+                                                                                                        | Inl (unsat_core) -> (*printf "unsat_core\n";*) (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map)
+                                                                                                        | Inr (n_state) -> (*printf "state\n";*) let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Atom (x)) in 
                                                                                                                                 (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf) 
                                                                                                    )
                                                                                 )
@@ -1620,7 +1626,7 @@ let rec unit_propagation_twl_inc_i assignment f_map s_state i_map inv_map prop d
                                             match y with 
                                                 | Constraint (z) -> (
                                                                      match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n y) i_map))) s_state with
-                                                                        | Inl (unsat_core) -> (assignment, f_map, s_state, convert_unsat_core_i (unsat_core) inv_map)
+                                                                        | Inl (unsat_core) -> (assignment, f_map, s_state, convert_unsat_core_i unsat_core i_map inv_map)
                                                                         | Inr (n_state) -> let (new_map, new_prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (y))) in 
                                                                                             (
                                                                                             match conf with 
@@ -1629,9 +1635,10 @@ let rec unit_propagation_twl_inc_i assignment f_map s_state i_map inv_map prop d
                                                                                             )
                                                                     )
                                                 | Index (z) -> (
-                                                                match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int z)) s_state with
-                                                                        | Inl (unsat_core) -> (assignment, f_map, s_state, convert_unsat_core_i (unsat_core) inv_map)
-                                                                        | Inr (n_state) -> let (new_map, new_prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (y))) in 
+                                                                let (s, v, d, tmp_dl) = (Tseitin.Inv_Map.find z inv_map) in
+                                                                (*printf ("atom: %s\n") (Printing.print_constraint_n s);*) match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int z)) s_state with
+                                                                        | Inl (unsat_core) -> (*printf "unsat_core\n";*) (assignment, f_map, s_state, convert_unsat_core_i unsat_core i_map inv_map)
+                                                                        | Inr (n_state) -> (*printf "state\n";*) let (new_map, new_prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (y))) in 
                                                                                             (
                                                                                             match conf with 
                                                                                                 | [] -> unit_propagation_twl_inc_i (Assignment (ys @ [(y, true, false, dl)])) new_map n_state i_map inv_map (xs @ new_prop) dl
@@ -1652,7 +1659,7 @@ let rec unit_propagation_twl_inc_i assignment f_map s_state i_map inv_map prop d
                                                       match y with
                                                         | Constraint (z) -> (
                                                                              match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Printing.print_constraint_n y)) i_map))) s_state with
-                                                                                | Inl (unsat_core) -> (assignment, f_map, s_state, convert_unsat_core_i (unsat_core) inv_map)
+                                                                                | Inl (unsat_core) -> (assignment, f_map, s_state, convert_unsat_core_i unsat_core i_map inv_map)
                                                                                 | Inr (n_state) -> let (new_map, new_prop, conf) = update_watch_lists_i assignment f_map (Atom (y)) in 
                                                                                                     ( 
                                                                                                     match conf with
@@ -1661,10 +1668,17 @@ let rec unit_propagation_twl_inc_i assignment f_map s_state i_map inv_map prop d
                                                                                                     )
                                                                             )
                                                         | Index (z) -> (
-                                                                        let (c, v, d, dl) = (Tseitin.Inv_Map.find z inv_map) in 
-                                                                        match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Printing.print_constraint_n c)) i_map))) s_state with
-                                                                            | Inl (unsat_core) -> (assignment, f_map, s_state, convert_unsat_core_i (unsat_core) inv_map)
-                                                                            | Inr (n_state) -> let (new_map, new_prop, conf) = update_watch_lists_i assignment f_map (Atom (y)) in 
+                                                                        (*printf "z: %s\n" (string_of_int z);*)
+                                                                        let (c, v, d, tmp_dl) = (Tseitin.Inv_Map.find z inv_map) in 
+                                                                        (*printf ("up, not atom: %s, index: %s\n") (Printing.print_constraint_n c) (string_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map));
+                                                                        printf ("up, not atom: %s, index: %s\n") ("-" ^ (Printing.print_constraint_n c)) (string_of_int (Tseitin.Index_Map.find ("-" ^ (Printing.print_constraint_n c)) i_map));*)
+                                                                        (*let (bla0, v0, d0, tmpdl0) = (Tseitin.Inv_Map.find 0 inv_map) in 
+                                                                         let (bla1, v1, d1, tmpdl1) = (Tseitin.Inv_Map.find 1 inv_map) in
+                                                                          printf ("index 0 cons: %s\n") (Printing.print_constraint_n bla0);
+                                                                          printf ("index 1 cons: %s\n") (Printing.print_constraint_n bla1);*)
+                                                                         match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Printing.print_constraint_n c)) i_map))) s_state with
+                                                                            | Inl (unsat_core) -> (*printf "unsat_core\n";*) (assignment, f_map, s_state, convert_unsat_core_i unsat_core i_map inv_map)
+                                                                            | Inr (n_state) -> (*printf "state\n";*) let (new_map, new_prop, conf) = update_watch_lists_i assignment f_map (Atom (y)) in 
                                                                                                 ( 
                                                                                                  match conf with
                                                                                                     | [] -> unit_propagation_twl_inc_i (Assignment (ys @ [(y, false, false, dl)])) new_map n_state i_map inv_map (xs @ new_prop) dl
@@ -1801,15 +1815,14 @@ and restart_twl_inc_unit assignment formula f_map s_state checkpoints i_map inv_
                                     )
                                  );;
 
-let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map inv_map dl = 
-    (* Printing.print_assignment assignment; printf "\n\n"; *) match model_found_twl_i assignment formula with
+let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map inv_map dl =
+     (*Printing.print_assignment assignment; printf "\n\n";*) match model_found_twl_i assignment formula with
         | true -> (
-                   printf "test\n\n";
                    (*Printing.print_assignment assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*) 
                    match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) s_state with
                     | Simplex_inc.Inl (unsat_core) -> let (num, cp) = hd (checkpoints) in
                                                       let r_state = Simplex_inc.backtrack_simplex cp s_state in
-                                                       let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core inv_map) in 
+                                                       let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
                                                         printf "restart\n\n";
                                                         restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map f_map ys) r_state [hd (checkpoints)] i_map inv_map
                     | Simplex_inc.Inr (n_state) -> (* According to my understanding this is sufficient info to determine that formula is SAT *)
@@ -1818,12 +1831,14 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
         | false -> let new_cps = checkpoints @ [(dl, Simplex_inc.checkpoint_simplex s_state)] in
                     let (new_assignment, new_map, new_dl, new_state, prop, conf) = decision_twl_inc_i formula assignment f_map s_state i_map inv_map dl in 
                     (
+                     (*printf "D: "; Printing.print_assignment new_assignment; printf "\n\n";*) 
                      match conf with 
                         | [] -> (
                                  match prop with
                                     | [] -> dpll_twl_inc_i_rec new_assignment formula new_map new_state new_cps i_map inv_map new_dl
                                     | x :: xs -> let (n_assignment, n_map, n_state, n_conf) = unit_propagation_twl_inc_i new_assignment new_map new_state i_map inv_map prop new_dl in 
                                                     (
+                                                     (*printf "UP: "; Printing.print_assignment n_assignment; printf "\n\n";*) 
                                                      match n_conf with
                                                       | [] -> (
                                                                 match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) n_state with
@@ -1833,12 +1848,12 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
                                                                                            match length unsat_core with 
                                                                                             | 0 -> failwith "[Invalid argument] unsat core empty"
                                                                                             | 1 -> (
-                                                                                                    match (hd (convert_unsat_core_i unsat_core inv_map)) with
+                                                                                                    match (hd (convert_unsat_core_i unsat_core i_map inv_map)) with
                                                                                                         | Atom (y) -> restart_twl_inc_i_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y false
                                                                                                         | Not (Atom (y)) -> restart_twl_inc_i_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
                                                                                                         | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: unsat_core does not consist of literals"
                                                                                                    )
-                                                                                            | _ -> let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core inv_map) in 
+                                                                                            | _ -> let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
                                                                                                     printf "restart\n\n"; restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map n_map ys) r_state [hd (checkpoints)] i_map inv_map
                                                                                           )
                                                                     | Inr (state) -> dpll_twl_inc_i_rec n_assignment formula n_map state new_cps i_map inv_map new_dl
@@ -1908,7 +1923,7 @@ and restart_twl_inc_i assignment formula f_map s_state checkpoints i_map inv_map
 (* TODO: check if correct when everything else is done *)
 and restart_twl_inc_i_unit assignment formula f_map s_state checkpoints i_map inv_map unit_literal lit_val = 
                         let (new_formula, new_assignment, prop, conf_unit, new_state) = preprocess_unit_clauses_inc_i (preserve_unit_assignments assignment) formula s_state i_map inv_map in
-                            if conf_unit
+                            (*Printing.print_assignment new_assignment; printf "\n\n";*) if conf_unit
                             then false
                             else (
                                   let (n_assignment, n_map, n_state, conf) = let Assignment (xs) = new_assignment in unit_propagation_twl_inc_i (Assignment (xs @ [(unit_literal, lit_val, false, 0)])) f_map new_state i_map inv_map prop 0 in 
@@ -1922,7 +1937,7 @@ and restart_twl_inc_i_unit assignment formula f_map s_state checkpoints i_map in
 
 let sat_inc_i (formula, cs, i_map, inv_map) =
    let (tableau, cs) = (Util.to_simplex_format_inc_init cs i_map) in
-    Printing.print_simplex_constraints_inc tableau;
+    (*Printing.print_simplex_constraints_inc tableau;*)
     let state = Simplex_inc.init_simplex Simplex_inc.linorder_nat tableau in
     match (dpll_twl_inc_i formula i_map inv_map state [(-1, Simplex_inc.checkpoint_simplex state)]) with
         | true -> printf "SAT\n"

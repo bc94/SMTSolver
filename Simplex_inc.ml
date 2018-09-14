@@ -1,3 +1,5 @@
+open String
+
 module Simplex_inc : sig
   type 'a equal
   type int = Int_of_integer of Big_int.big_int
@@ -43,8 +45,8 @@ module Simplex_inc : sig
           sum
   val assert_simplex :
     'c equal -> 'd lrv * 'd equal ->
-      'a -> 'b * (('a -> ('c * 'd atom) list) * ('c, 'd) state) ->
-              (('c list), ('b * (('a -> ('c * 'd atom) list) * ('c, 'd) state)))
+      nat -> 'b * ((nat -> ('c * 'd atom) list) * ('c, 'd) state) ->
+              (('c list), ('b * ((nat -> ('c * 'd atom) list) * ('c, 'd) state)))
                 sum
   val backtrack_simplex :
     (nat, ('a * 'b)) mapping * (nat, ('a * 'b)) mapping ->
@@ -1315,12 +1317,12 @@ let rec init_simplex _A
                init_state zero_QDelta t))));;
 
 let rec check_simplex (_A1, _A2)
-  (cs, (asi, s)) =
+  (cs, (asi, s)) = (*Printf.printf "check_simplex\n\n";*)
     (match check_s _A1 (lrv_QDelta, equal_QDelta) s with Inl a -> Inl a
       | Inr sa -> Inr (cs, (asi, sa)));;
 
 let rec assert_simplex _C (_D1, _D2)
-  i (cs, (asi, s)) =
+  i (cs, (asi, s)) = (*Printf.printf "assert atom %s:\n\n" (string_of_int (Big_int.int_of_big_int (integer_of_nat i)));*)
     (match assert_all_s _C (_D1, _D2) (asi i) s with Inl a -> Inl a
       | Inr sa -> Inr (cs, (asi, sa)));;
 

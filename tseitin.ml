@@ -322,7 +322,7 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last =
                                 inv_map,
                                 i)
                              )
-                        else (
+                        else ( 
                               ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (Index i)])] @ 
                                [Disjunction ([Not (Atom (Index i)); Atom (AuxVar n_aux)])],
                                n_last,
@@ -338,7 +338,7 @@ let tseitin_transformation_inc_n_i f n_aux n_last =
         | Formula (x) -> (
                           match (transform_elem_inc_i x [] Index_Map.empty Inv_Map.empty 0 n_aux n_last) with
                             | (xs, n, cs, i_map, inv_map, i) -> (Formula (Conjunction ([Atom (AuxVar n_aux)] @ xs)), Assignment (cs), i_map, inv_map)
-                            | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n"
+                            | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n" 
                          )
         | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n";;
 
