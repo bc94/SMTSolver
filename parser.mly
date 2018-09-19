@@ -39,7 +39,7 @@ prog:
     ;
 
 formula:
-    | OPEN_VALIDITY; e = elem; CLOSE_VALIDITY   { Formula e }
+    | OPEN_VALIDITY; e = elem; CLOSE_VALIDITY   { Formula (Not e) }
     ;
 
 elem:

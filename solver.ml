@@ -1355,7 +1355,6 @@ let rec convert_unsat_core_rec unsat_core inv_map result =
 
 let convert_unsat_core unsat_core inv_map = convert_unsat_core_rec unsat_core inv_map [];;
 
-(* TODO: fix *)
 let rec convert_unsat_core_i_rec unsat_core i_map inv_map result =
     match unsat_core with
         | [] -> result
@@ -1800,7 +1799,6 @@ and restart_twl_inc assignment formula f_map s_state checkpoints i_map inv_map =
                                     )
                                  )
                                                 
-(* TODO: check if correct when everything else is done *)
 and restart_twl_inc_unit assignment formula f_map s_state checkpoints i_map inv_map unit_literal lit_val = 
                         let (new_formula, new_assignment, prop, conf_unit, new_state) = preprocess_unit_clauses_inc (preserve_unit_assignments assignment) formula s_state i_map inv_map in
                             if conf_unit
@@ -1920,7 +1918,6 @@ and restart_twl_inc_i assignment formula f_map s_state checkpoints i_map inv_map
                                     )
                                  )
                                                 
-(* TODO: check if correct when everything else is done *)
 and restart_twl_inc_i_unit assignment formula f_map s_state checkpoints i_map inv_map unit_literal lit_val = 
                         let (new_formula, new_assignment, prop, conf_unit, new_state) = preprocess_unit_clauses_inc_i (preserve_unit_assignments assignment) formula s_state i_map inv_map in
                             (*Printing.print_assignment new_assignment; printf "\n\n";*) if conf_unit
