@@ -2,6 +2,18 @@ open Core.Std
 open Lexer
 open Lexing
 
+let run_solver_indexed value = 
+    let (f, cs, i_map, inv_map) = (Tseitin.tseitin_transformation_inc_i value) in
+        Solver.sat_inc_i (f, cs, i_map, inv_map);;
+    
+let run_solver_incremental value = 
+    let (f, cs, i_map, inv_map) = (Tseitin.tseitin_transformation_inc value) in
+        Solver.sat_inc (f, cs, i_map, inv_map);;
+
+let run_solver_twl value = Solver.sat_twl (Tseitin.tseitin_transformation value);;
+
+let run_solver_simple value = Solver.sat (Tseitin.tseitin_transformation value);;
+
 let print_pos outx lexbuf = 
     let pos = lexbuf.lex_curr_p in
     fprintf outx "%s:%d:%d" pos.pos_fname
@@ -20,12 +32,10 @@ let rec parse lexbuf option =
     match parse_with_error lexbuf with
         | Some value -> (
                          match option with
-                            | "indexed" -> let (f, cs, i_map, inv_map) = (Util.time Tseitin.tseitin_transformation_inc_i value) in
-                                                Util.time Solver.sat_inc_i (f, cs, i_map, inv_map)
-                            | "incremental" -> let (f, cs, i_map, inv_map) = (Util.time Tseitin.tseitin_transformation_inc value) in
-                                                Util.time Solver.sat_inc (f, cs, i_map, inv_map)
-                            | "twl" -> Util.time Solver.sat_twl (Util.time Tseitin.tseitin_transformation value)
-                            | "simple" -> Util.time Solver.sat (Util.time Tseitin.tseitin_transformation value)
+                            | "indexed" -> Util.time run_solver_indexed value 
+                            | "incremental" -> Util.time run_solver_incremental value
+                            | "twl" -> Util.time run_solver_twl value
+                            | "simple" -> Util.time run_solver_simple value
                             | _ -> failwith "Unknown command line option"
                         (*printf "Before Tseitin: \n\n";
                         Solver.print_formula value;

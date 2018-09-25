@@ -41,6 +41,8 @@ rule read =
     | "</less>"         { CLOSE_LESS }   
     | "<less_equal>"    { OPEN_LESS_EQ }
     | "</less_equal>"   { CLOSE_LESS_EQ }
+    | "<equal>"         { OPEN_EQ }
+    | "</equal>"        { CLOSE_EQ }
     | "<sum>"           { OPEN_SUM }
     | "</sum>"          { CLOSE_SUM }
     | "<product>"       { OPEN_PRODUCT } 

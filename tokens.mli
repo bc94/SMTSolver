@@ -12,6 +12,8 @@ type token = OPEN_VALIDITY
            | CLOSE_LESS
            | OPEN_LESS_EQ
            | CLOSE_LESS_EQ
+           | OPEN_EQ
+           | CLOSE_EQ
            | OPEN_SUM
            | CLOSE_SUM
            | OPEN_PRODUCT

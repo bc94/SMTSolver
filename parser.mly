@@ -18,6 +18,8 @@ open Types
 %token CLOSE_LESS
 %token OPEN_LESS_EQ
 %token CLOSE_LESS_EQ
+%token OPEN_EQ
+%token CLOSE_EQ 
 %token OPEN_SUM
 %token CLOSE_SUM
 %token OPEN_PRODUCT
@@ -55,6 +57,7 @@ elem_list:
 
 literal:
     | OPEN_NOT; l = literal; CLOSE_NOT  { Not l }
+    | OPEN_ATOM; OPEN_EQ; n1 = num; n2 = num; CLOSE_EQ; CLOSE_ATOM  { Conjunction ([(Atom (Constraint (LessEq (n1, n2))))] @ [(Atom (Constraint (LessEq (n2, n1))))]) }
     | OPEN_ATOM; c = constr; CLOSE_ATOM { Atom  c }
     ;
 
@@ -79,23 +82,39 @@ num:
     ;
 
 num_l:
-    | n = NUM   { Num (n - 1) }
+    | s = sum_l { s }
+    | p = product_l { p }
+    | n = number_l { n }
+    | v = var   { Sum ([v] @ [Num (-1)]) }
+    ;
 
 num_list:
     | n = num; nl = num_list    { n :: nl }
     | (* empty *)   { [] }
+    ;
 
 sum:
     | OPEN_SUM; nl = num_list; CLOSE_SUM   { Sum (nl) }
+    ;
+
+sum_l:
+    | OPEN_SUM; nl = num_list; CLOSE_SUM  { Sum (nl @ [(Num (-1))]) }
     ;
 
 product:
     | OPEN_PRODUCT; nl = num_list; CLOSE_PRODUCT   { Prod (nl) }
     ;
 
+product_l:
+    | OPEN_PRODUCT; nl = num_list; CLOSE_PRODUCT    { Sum ([Prod (nl)] @ [(Num (-1))]) }
+    ;
+
 number:
     | OPEN_NUM; c = constant; CLOSE_NUM { Num c }
     ;
+
+number_l:
+    | OPEN_NUM; c = constant; CLOSE_NUM  { Num (c - 1) }
 
 var:
     | OPEN_VAR; v = variable; CLOSE_VAR { Var v }

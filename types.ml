@@ -7,7 +7,8 @@ type num_type = Sum of num_type list
               | Num of int
               | Var of string;;
 
-type less_equal = LessEq of num_type * num_type;;
+type less_equal = LessEq of num_type * num_type
+                | Eq of num_type * num_type;;
 
 type constraint_n = Constraint of less_equal
                   | Index of int

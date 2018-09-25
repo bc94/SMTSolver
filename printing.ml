@@ -23,6 +23,7 @@ and print_num_type n =
 let print_less_equal le =
     match le with
         | LessEq (x, y) -> "LessEq (" ^ (print_num_type x) ^ ", " ^ (print_num_type y) ^ ")"
+        | Eq (x, y) -> "Eq (" ^ (print_num_type x) ^ ", " ^ (print_num_type y) ^ ")"
         | _ -> failwith "[Invalid formula]: print_less_equal"
 
 let print_constraint_n c = 

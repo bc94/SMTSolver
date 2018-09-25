@@ -9,7 +9,7 @@ let time f x =
     let start = Unix.gettimeofday ()
     in let res = f x
     in let stop = Unix.gettimeofday ()
-    in let () = Printf.printf "Time: %fs\n%!" (stop -. start)
+    in let () = Printf.printf "%fs\n%!" (stop -. start)
     in
        res;;
 
@@ -132,6 +132,7 @@ let rec op_to_simplex_format operator varlist varcount =
                                         | -1 -> ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int (varcount + 1)))), (varlist @ [(x, varcount + 1)]), (varcount + 1))
                                         | m -> ((Simplex.lp_monom (Simplex.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex.nat_of_integer (big_int_of_int m))), varlist, varcount) 
                                        )       
+        | Prod ([Var (_); Var (_)]) -> failwith "[Invalid argument] op_to_simplex_format: constraint not linear"
         | _ -> failwith "[Invalid argument] op_to_simplex_format";;
 
 
@@ -408,6 +409,33 @@ let to_simplex_format_init assignment = to_simplex_format assignment [] 0 [] [];
 (* Incremental simplex version of the format conversion functions *)
 (******************************************************************)
 
+let rec sum_to_simplex_format_inc sum result = 
+    match sum with
+        | Sum ([]) -> result
+        | Sum (x :: xs) -> (
+                            match x with
+                                | Num (n) -> sum_to_simplex_format_inc (Sum (xs)) (result + n)
+                                | Sum (s) -> sum_to_simplex_format_inc (Sum (xs)) (result + sum_to_simplex_format_inc x 0)
+                                | Var (x) -> failwith "[Invalid argument] sum_to_simplex_format_inc: constraint not linear"
+                                | Prod (p) -> failwith "[Invalid argument] sum_to_simplex_format_inc: constraint not linear"
+                           );;
+
+let rec prod_to_simplex_format_inc prod =
+    match prod with
+        | Prod ([Var (x); Num (n)]) -> (x, n)
+        | Prod ([Num (n); Var (x)]) -> (x, n)
+        | Prod ([Prod (p); Num (n)]) -> let (x, m) = prod_to_simplex_format_inc (Prod (p)) in (x, n*m)
+        | Prod ([Num (n); Prod (p)]) -> let (x, m) = prod_to_simplex_format_inc (Prod (p)) in (x, n*m)
+        | Prod ([Prod (p); Sum (s)]) -> let (x, m) = prod_to_simplex_format_inc (Prod (p)) in
+                                         let n = sum_to_simplex_format_inc (Sum (s)) 0 in (x, n*m)
+        | Prod ([Sum (s); Prod (p)]) -> let (x, m) = prod_to_simplex_format_inc (Prod (p)) in
+                                         let n = sum_to_simplex_format_inc (Sum (s)) 0 in (x, n*m)
+        | Prod ([Prod (p); Var (x)]) -> failwith "[Invalid argument] prod_to_simplex_format_inc: constraint not linear"
+        | Prod ([Var (x); Prod (p)]) -> failwith "[Invalid argument] prod_to_simplex_format_inc: constraint not linear"
+        | Prod ([Prod (p1); Prod (p2)]) -> failwith "[Invalid argument] prod_to_simplex_format_inc: constraint not linear"
+        | Prod ([Var (_); Var (_)]) -> failwith "[Invalid argument] prod_to_simplex_format_inc: constraint not linear"
+        | _ -> failwith "[Invalid argument] prod_to_simplex_format_inc: argument not a product";;
+
 let rec op_to_simplex_format_inc operator varlist varcount = 
     match operator with
         | Var (x) -> (
@@ -426,7 +454,7 @@ let rec op_to_simplex_format_inc operator varlist varcount =
                                                                             | (ss_lp, newlist, newcount) -> ((Simplex_inc.plus_linear_poly s_lp ss_lp), newlist, newcount)
                                                                        )
                                     )
-                       | [] -> failwith "[Invalid argument] op_to_simplex_format: empty list Sum ([])"
+                       | [] -> failwith "[Invalid argument] op_to_simplex_format_inc: empty list Sum ([])"
                      )
         | Prod ([Var (x); Num (n)]) -> (
                                         match (is_in_varlist varlist x) with 
@@ -438,7 +466,14 @@ let rec op_to_simplex_format_inc operator varlist varcount =
                                         | -1 -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), (varlist @ [(x, varcount + 1)]), (varcount + 1))
                                         | m -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), varlist, varcount) 
                                        )       
-        | _ -> failwith "[Invalid argument] op_to_simplex_format";;
+        | Prod ([Var (_); Var (_)]) -> failwith "[Invalid argument] op_to_simplex_format_inc: constraint not linear"
+        | Prod ([p1; p2]) -> let (x, n) = prod_to_simplex_format_inc operator in
+                                (
+                                 match (is_in_varlist varlist x) with 
+                                        | -1 -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), (varlist @ [(x, varcount + 1)]), (varcount + 1))
+                                        | m -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), varlist, varcount)   
+                                )
+        | _ -> failwith "[Invalid argument] op_to_simplex_format_inc";;
 
 let rec to_simplex_format_inc assignment varlist varcount result cs i_map = 
     match assignment with
