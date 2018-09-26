@@ -727,7 +727,7 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                                                 )
                                                                                        )
                                                                              | false -> ( 
-                                                                                         match (transform_constraint (Prod (p1), Sum ([(Prod (p2)); (Num (1))]))) with 
+                                                                                         match (transform_constraint (Prod (p1), Sum ([(Prod (p2)); (Num (-1))]))) with 
                                                                                             | (Num (n), sums) -> (
                                                                                                                   match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                                                     | (p_lp, newlist, newcount) -> 

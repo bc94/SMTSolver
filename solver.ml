@@ -1872,7 +1872,10 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
                                                                 (*printf "restart\n\n";*)
                                                                 restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map f_map ys) r_state [hd (checkpoints)] i_map inv_map
                     | Simplex_inc.Inr (n_state) -> (* According to my understanding this is sufficient info to determine that formula is SAT *)
-                                                    (* Printing.print_assignment assignment; *) true
+                                                    (*Printing.print_assignment assignment; printf "\n\n"; *)
+                                                    (*let (c, _, _, _) = (Tseitin.Inv_Map.find 26 inv_map) in
+                                                    printf "%s\n\n" (Printing.print_constraint_n c);*)
+                                                    true
                   )
         | false -> let new_cps = checkpoints @ [(dl, Simplex_inc.checkpoint_simplex s_state)] in
                     let (new_assignment, new_map, new_dl, new_state, prop, conf) = decision_twl_inc_i formula assignment f_map s_state i_map inv_map dl in 

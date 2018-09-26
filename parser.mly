@@ -10,6 +10,8 @@ open Types
 %token CLOSE_DISJUNCTION
 %token OPEN_CONJUNCTION
 %token CLOSE_CONJUNCTION
+%token TRUE
+%token FALSE
 %token OPEN_NOT
 %token CLOSE_NOT
 %token OPEN_ATOM
@@ -48,6 +50,8 @@ elem:
     | OPEN_CONJUNCTION; el = elem_list; CLOSE_CONJUNCTION  { Conjunction el }
     | OPEN_DISJUNCTION; el = elem_list; CLOSE_DISJUNCTION  { Disjunction el }
     | OPEN_NOT; e = elem; CLOSE_NOT  { Not e }
+    | TRUE  { Atom (Constraint (LessEq ((Num 0), (Num 1)))) }
+    | FALSE { Atom (Constraint (LessEq ((Num 1), (Num 0)))) }
     | l = literal   { l }
 
 elem_list:

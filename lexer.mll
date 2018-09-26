@@ -29,10 +29,10 @@ rule read =
     | "</validity>"     { CLOSE_VALIDITY }
     | "<disjunction>"   { OPEN_DISJUNCTION }
     | "</disjunction>"  { CLOSE_DISJUNCTION }
-    | "<disjunction/>"  { read lexbuf }
+    | "<disjunction/>"  { FALSE }
     | "<conjunction>"   { OPEN_CONJUNCTION }
     | "</conjunction>"  { CLOSE_CONJUNCTION }
-    | "<conjunction/>"  { read lexbuf }
+    | "<conjunction/>"  { TRUE }
     | "<not>"           { OPEN_NOT }
     | "</not>"          { CLOSE_NOT }
     | "<atom>"          { OPEN_ATOM }

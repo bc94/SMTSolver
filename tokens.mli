@@ -4,6 +4,8 @@ type token = OPEN_VALIDITY
            | CLOSE_DISJUNCTION
            | OPEN_CONJUNCTION
            | CLOSE_CONJUNCTION
+           | TRUE
+           | FALSE
            | OPEN_NOT
            | CLOSE_NOT
            | OPEN_ATOM
