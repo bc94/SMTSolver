@@ -105,11 +105,11 @@ let rec transform_constraint cons =
                                                         )
                                  )
         | (Prod (p), Sum (s)) -> (
-                                  match (extract_nums_p (Sum (s))) with
+                                  match (extract_nums (Sum (s))) with
                                     | (ss, ns) -> (
                                                          match p with 
-                                                            | [Var (x); Num (n)] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Var (x); Num (n)])]))
-                                                            | [Num (n); Var (x)] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Num (n); Var (x)])]))
+                                                            | [Var (x); Num (n)] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Var (x); Num (-1 * n)])]))
+                                                            | [Num (n); Var (x)] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Num (-1 * n); Var (x)])]))
                                                             | _ -> failwith "[Invalid argument] transform_constraint"
                                                         )
                                  )

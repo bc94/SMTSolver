@@ -1317,12 +1317,12 @@ let rec init_simplex _A
                init_state zero_QDelta t))));;
 
 let rec check_simplex (_A1, _A2)
-  (cs, (asi, s)) = Printf.printf "check_simplex\n\n";
+  (cs, (asi, s)) = (*Printf.printf "check_simplex\n\n";*)
     (match check_s _A1 (lrv_QDelta, equal_QDelta) s with Inl a -> Inl a
       | Inr sa -> Inr (cs, (asi, sa)));;
 
 let rec assert_simplex _C (_D1, _D2)
-  i (cs, (asi, s)) = Printf.printf "assert atom %s:\n\n" (string_of_int (Big_int.int_of_big_int (integer_of_nat i)));
+  i (cs, (asi, s)) = (*Printf.printf "assert atom %s:\n\n" (string_of_int (Big_int.int_of_big_int (integer_of_nat i)));*)
     (match assert_all_s _C (_D1, _D2) (asi i) s with Inl a -> Inl a
       | Inr sa -> Inr (cs, (asi, sa)));;
 

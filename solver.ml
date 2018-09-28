@@ -1859,6 +1859,33 @@ and restart_twl_inc_unit assignment formula f_map s_state checkpoints i_map inv_
                                     )
                                  );;
 
+let assert_backjump l i_map inv_map state = 
+    match l with 
+        | Atom (x) -> if (is_proper_constraint x)
+                      then (
+                            match x with
+                                | Index (y) -> let (c, v, d, dl) = (Tseitin.Inv_Map.find y inv_map) in
+                                                (
+                                                 match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Printing.print_constraint_n c)) i_map))) state with
+                                                    | Inl (unsat_core) -> (state, unsat_core)
+                                                    | Inr (n_state) -> (n_state, [])
+                                                )
+                                | _ -> failwith "[Invalid argument] assert_backjump"
+                            )
+                      else (state, [])
+        | Not (Atom (x)) -> if (is_proper_constraint x)
+                            then (
+                                  match x with
+                                    | Index (y) -> (
+                                                    match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int y)) state with
+                                                        | Inl (unsat_core) -> (state, unsat_core)
+                                                        | Inr (n_state) -> (n_state, [])
+                                                   )
+                                    | _ -> failwith "[Invalid argument] assert_backjump"
+                                 )
+                            else (state, [])
+        | _ -> failwith "[Invalid argument] assert_backjump";;
+
 let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map inv_map dl =
      (*Printing.print_assignment assignment; printf "\n\n";*) match model_found_twl_i assignment formula with
         | true -> (
@@ -1869,10 +1896,10 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
                                                       else let (num, cp) = hd (checkpoints) in
                                                             let r_state = Simplex_inc.backtrack_simplex cp s_state in
                                                             let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
-                                                                (*printf "restart\n\n";*)
+                                                                (*printf "RESTART\n\n";*)
                                                                 restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map f_map ys) r_state [hd (checkpoints)] i_map inv_map
                     | Simplex_inc.Inr (n_state) -> (* According to my understanding this is sufficient info to determine that formula is SAT *)
-                                                    Printing.print_assignment assignment; printf "\n\n";
+                                                    (*Printing.print_assignment assignment; printf "\n\n";*)
                                                     (*let (c, _, _, _) = (Tseitin.Inv_Map.find 26 inv_map) in
                                                     printf "%s\n\n" (Printing.print_constraint_n c);*)
                                                     true
@@ -1897,51 +1924,84 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
                                                                                            match length unsat_core with 
                                                                                             | 0 -> failwith "[Invalid argument] unsat core empty"
                                                                                             | 1 -> (
-                                                                                                    match (hd (convert_unsat_core_i unsat_core i_map inv_map)) with
+                                                                                                    (*printf "RESTART\n\n";*) match (hd (convert_unsat_core_i unsat_core i_map inv_map)) with
                                                                                                         | Atom (y) -> restart_twl_inc_i_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y false
                                                                                                         | Not (Atom (y)) -> restart_twl_inc_i_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
                                                                                                         | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: unsat_core does not consist of literals"
                                                                                                    )
                                                                                             | _ -> let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
-                                                                                                    (*printf "restart\n\n";*) restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map n_map ys) r_state [hd (checkpoints)] i_map inv_map
+                                                                                                    (*printf "RESTART\n\n";*) restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map n_map ys) r_state [hd (checkpoints)] i_map inv_map
                                                                                           )
                                                                     | Inr (state) -> dpll_twl_inc_i_rec n_assignment formula n_map state new_cps i_map inv_map new_dl
                                                                )
-                                                      | x :: xs -> (*printf "non-empty conf\n\n";
+                                                      | z :: zs -> (*printf "non-empty conf\n\n";
                                                                     printf "n_conf: %s\n\n" (Printing.print_element_list n_conf);*)
                                                                     (
                                                                     let (ys, l, bj_clause) = (backjump_twl_i n_assignment formula (hd n_conf)) in 
                                                                      let (bj_map, _, _) = update_watch_lists_i ys new_map l in
                                                                      let cdl = (get_current_decision_level ys) in
                                                                       let cp = get_checkpoint new_cps cdl in 
-                                                                       let b_state = Simplex_inc.backtrack_simplex cp n_state in 
-                                                                        (
-                                                                         (*printf "backjump\n\n";*) match (bj_clause, (conflict_exists_i ys formula)) with
-                                                                            | (_, true) -> false
-                                                                            | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                                                            | (Disjunction ([z]), false) -> dpll_twl_inc_i_rec ys formula bj_map b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                                                            | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map bj_clause) b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                                                            | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
-                                                                        )
+                                                                       let b_state = Simplex_inc.backtrack_simplex cp n_state in
+                                                                        let (bj_state, unsat_core) = assert_backjump l i_map inv_map b_state in
+                                                                         (
+                                                                          match (length unsat_core) with
+                                                                            | 0 -> (
+                                                                                    (*printf "BACKJUMP\n\n";*) match (bj_clause, (conflict_exists_i ys formula)) with
+                                                                                        | (_, true) -> false
+                                                                                        | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                                                                        | (Disjunction ([v]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                                                                        | (Disjunction (vs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map bj_clause) bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                                                                        | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
+                                                                                   )
+                                                                            | 1 -> let (num, cp_h) = hd (checkpoints) in
+                                                                                          let r_state = Simplex_inc.backtrack_simplex cp_h bj_state in
+                                                                                           (
+                                                                                            match (hd (convert_unsat_core_i unsat_core i_map inv_map)) with
+                                                                                                        | Atom (y) -> restart_twl_inc_i_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y false
+                                                                                                        | Not (Atom (y)) -> restart_twl_inc_i_unit n_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
+                                                                                                        | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: unsat_core does not consist of literals"
+                                                                                           )
+                                                                            | _ -> let (num, cp_h) = hd (checkpoints) in
+                                                                                   let r_state = Simplex_inc.backtrack_simplex cp_h bj_state in
+                                                                                    let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
+                                                                                     restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map n_map ys) r_state [hd (checkpoints)] i_map inv_map
+                                                                         )
                                                                    )
                                                     )
                                 )
-                        | x :: xs -> (
+                        | x :: xs -> (*printf "non-empty conf\n\n";
+                                     printf "conf: %s\n\n" (Printing.print_element_list conf);*)
+                                     (
                                      let (ys, l, bj_clause) = (backjump_twl_i new_assignment formula (hd conf)) in 
                                      let (bj_map, _, _) = update_watch_lists_i ys new_map l in
                                        let cdl = (get_current_decision_level ys) in
                                         let cp = get_checkpoint new_cps cdl in 
                                          let b_state = Simplex_inc.backtrack_simplex cp new_state in 
-                                        (
-                                         (*printf "backjump\n\n";*) match (bj_clause, (conflict_exists_i ys formula)) with
-                                            | (_, true) -> false
-                                            | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                            | (Disjunction ([z]), false) -> dpll_twl_inc_i_rec ys formula bj_map b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                            | (Disjunction (zs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map bj_clause) b_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                            | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
-                                        )
-                                     )
-                                      
+                                          let (bj_state, unsat_core) = assert_backjump l i_map inv_map b_state in
+                                            (
+                                             match (length unsat_core) with
+                                                | 0 -> (
+                                                        (*printf "BACKJUMP\n\n";*) match (bj_clause, (conflict_exists_i ys formula)) with
+                                                        | (_, true) -> false
+                                                        | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                                        | (Disjunction ([v]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                                        | (Disjunction (vs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map bj_clause) bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                                        | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
+                                                        )
+                                                | 1 -> let (num, cp_h) = hd (checkpoints) in
+                                                        let r_state = Simplex_inc.backtrack_simplex cp_h bj_state in
+                                                         (
+                                                          match (hd (convert_unsat_core_i unsat_core i_map inv_map)) with
+                                                            | Atom (y) -> restart_twl_inc_i_unit new_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y false
+                                                            | Not (Atom (y)) -> restart_twl_inc_i_unit new_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
+                                                            | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: unsat_core does not consist of literals"
+                                                         )
+                                                | _ -> let (num, cp_h) = hd (checkpoints) in
+                                                        let r_state = Simplex_inc.backtrack_simplex cp_h bj_state in
+                                                         let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
+                                                          restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map new_map ys) r_state [hd (checkpoints)] i_map inv_map
+                                            )
+                                     )         
                     )
 
 and dpll_twl_inc_i formula i_map inv_map s_state checkpoints = 
@@ -1992,7 +2052,7 @@ and restart_twl_inc_i_unit assignment formula f_map s_state checkpoints i_map in
 
 let sat_inc_i (formula, cs, i_map, inv_map) =
    let (tableau, cs) = (Util.to_simplex_format_inc_init cs i_map) in
-    Printing.print_simplex_constraints_inc tableau;
+    (*Printing.print_simplex_constraints_inc tableau;*)
     let state = Simplex_inc.init_simplex Simplex_inc.linorder_nat tableau in
     match (dpll_twl_inc_i formula i_map inv_map state [(-1, Simplex_inc.checkpoint_simplex state)]) with
         | true -> printf "SAT "
