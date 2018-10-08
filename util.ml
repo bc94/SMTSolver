@@ -9,7 +9,7 @@ let time f x =
     let start = Unix.gettimeofday ()
     in let res = f x
     in let stop = Unix.gettimeofday ()
-    in let () = Printf.printf "%fs\n%!" (stop -. start)
+    in let () = Printf.printf "%f\n%!" (stop -. start)
     in
        res;;
 
@@ -65,9 +65,9 @@ let rec extract_nums_p_rec s sums ns =
         | Sum ([]) -> (sums, ns)
         | Sum (x :: xs) -> (
                             match x with 
-                                | Num (n) -> extract_nums_rec (Sum (xs)) sums (ns @ [n])
-                                | Var (y) -> extract_nums_rec (Sum (xs)) (sums @ [x]) ns
-                                | Prod (p) -> extract_nums_rec (Sum (xs)) (sums @ [(negate_prod x)]) ns
+                                | Num (n) -> extract_nums_p_rec (Sum (xs)) sums (ns @ [n])
+                                | Var (y) -> extract_nums_p_rec (Sum (xs)) (sums @ [x]) ns
+                                | Prod (p) -> extract_nums_p_rec (Sum (xs)) (sums @ [(negate_prod x)]) ns
                                 | _ -> failwith "[Invalid argument] part of constraint has form 'Sum (Sum (xs))'. This should not happen if it was parsed correctly."
                            )
         | _ -> failwith "[Invalid argument] extract_nums: this function should only be called with sums";;
@@ -84,8 +84,8 @@ let rec transform_constraint cons =
                                     | (ss, ns) -> (Sum (ss @ [Prod ([Num (-1); Var (x)])]), Num (List.fold_left (-) 0 ns))
                                 )
         | (Var (x), Sum (s)) -> (
-                                 match (extract_nums (Sum (s))) with
-                                    | (ss, ns) -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Num (-1); Var (x)])]))
+                                 match (extract_nums_p (Sum (s))) with
+                                    | (ss, ns) -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Var (x)]))
                                 )
         | (Sum (s), Num (n)) -> (
                                  match (extract_nums (Sum (s))) with
@@ -96,11 +96,11 @@ let rec transform_constraint cons =
                                     | (ss, ns) -> (Num (List.fold_left (-) n ns), Sum (ss))
                                 )
         | (Sum (s), Prod (p)) -> (
-                                  match (extract_nums_p (Sum (s))) with
+                                  match (extract_nums (Sum (s))) with
                                     | (ss, ns) -> (
                                                          match p with 
-                                                            | [Var (x); Num (n)] -> (Sum (ss @ [Prod ([Var (x); Num (n)])]), Num (List.fold_left (-) 0 ns))
-                                                            | [Num (n); Var (x)] -> (Sum (ss @ [Prod ([Num (n); Var (x)])]), Num (List.fold_left (-) 0 ns))
+                                                            | [Var (x); Num (n)] -> (Sum (ss @ [Prod ([Var (x); Num (-1 * n)])]), Num (List.fold_left (-) 0 ns))
+                                                            | [Num (n); Var (x)] -> (Sum (ss @ [Prod ([Num (-1 * n); Var (x)])]), Num (List.fold_left (-) 0 ns))
                                                             | _ -> failwith "[Invalid argument] transform_constraint"
                                                         )
                                  )
@@ -121,6 +121,27 @@ let rec transform_constraint cons =
                                                           )
                                   )
         | _ -> failwith "[Invalid argument] transform_constraint";;
+
+let transform_constraint_var_sum_geq cons =
+    match cons with
+        | (Var (x), Sum (s)) -> (
+                                 match (extract_nums (Sum (s))) with
+                                    | (ss, ns) -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Num (-1); Var (x)])]))
+                                )
+        | _ -> failwith "[Invalid argument] transform_constraint_var_sum_geq: argument not a 'Var OPERATOR Sum' constraint";;
+
+let transform_constraint_p cons =
+    match cons with
+        | (Prod (p), Sum (s)) -> (
+                                  match (extract_nums_p (Sum (s))) with
+                                    | (ss, ns) -> (
+                                                         match p with 
+                                                            | [Var (x); Num (n)] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Var (x); Num (n)])]))
+                                                            | [Num (n); Var (x)] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Num (n); Var (x)])]))
+                                                            | _ -> failwith "[Invalid argument] transform_constraint"
+                                                        )
+                                 )
+        | _ -> failwith "[Invalid argument] transform_constraint_p: constraint not a 'Product OPERATOR Product' constraint";;
 
 let rec op_to_simplex_format operator varlist varcount = 
     match operator with
@@ -545,7 +566,7 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                                                                                                  i_map
                                                                            )
                                                         | (Var (x), Var (y)) ->
-                                                                            (
+                                                                             (
                                                                              match (is_in_varlist varlist x) with 
                                                                               | -1 -> (
                                                                                        match ((is_in_varlist varlist y), v) with 
@@ -554,7 +575,7 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                                                                                                                                                                  (cs @ [(c, v, d, dl)])
                                                                                                                                                                                                                  i_map
                                                                                         | (_, false) -> ( 
-                                                                                                          match (transform_constraint (Var (x), Sum ([(Var (y)); (Num (-1))]))) with 
+                                                                                                         match (transform_constraint (Var (x), Sum ([(Prod([(Num (1)); (Var (y))])); (Num (-1))]))) with 
                                                                                                                 | (Num (n), sums) -> (
                                                                                                                                       match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                                                                         | (s_lp, newlist, newcount) -> 
@@ -573,7 +594,7 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                                                                                                                                            (cs @ [(c, v, d, dl)]) 
                                                                                                                                                                                            i_map
                                                                                         | (_, false) -> ( 
-                                                                                                          match (transform_constraint (Var (x), Sum ([(Var (y)); (Num (-1))]))) with 
+                                                                                                          match (transform_constraint (Var (x), Sum ([(Prod([(Num (1)); (Var (y))])); (Num (-1))]))) with 
                                                                                                                 | (Num (n), sums) -> (
                                                                                                                                       match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                                                                         | (s_lp, newlist, newcount) -> 
@@ -601,7 +622,7 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                         )
                                                         | (Var (x), Sum (s)) ->
                                                                         ( 
-                                                                         match (transform_constraint (Var (x), Sum (s))) with 
+                                                                         match (transform_constraint_var_sum_geq (Var (x), Sum (s))) with 
                                                                             | (Num (n), sums) -> (
                                                                                             match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                             | (s_lp, newlist, newcount) -> 
@@ -747,7 +768,7 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                                                 )
                                                                                        )
                                                                              | false -> ( 
-                                                                                         match (transform_constraint (Prod (p1), Sum ([(Prod (p2)); (Num (-1))]))) with 
+                                                                                         match (transform_constraint_p (Prod (p1), Sum ([(Prod (p2)); (Num (-1))]))) with 
                                                                                             | (Num (n), sums) -> (
                                                                                                                   match (op_to_simplex_format_inc sums varlist varcount) with
                                                                                                                     | (p_lp, newlist, newcount) -> 
