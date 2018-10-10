@@ -2,7 +2,7 @@
 
 BM_PATH="../xml_tc2017"
 FILES=46366
-VER="indexed"
+VER="twl"
 
 for ((i=1; i<=FILES;i++)); do
     echo "$i"
