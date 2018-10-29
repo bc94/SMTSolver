@@ -1059,11 +1059,9 @@ let rec check_clause assignment f_map clause literal prop conf =
 
 let rec check_clause_i assignment f_map clause literal prop conf = 
     (*Printing.print_assignment assignment; printf "\n\n";*) match clause with
-        | Disjunction (w1 :: w2 :: ws) -> (
+        | Disjunction (w1 :: w2 :: ws) -> (*
                                            match (compare w1 literal) with
-                                            | 0 -> (*printf "clause: %s\n" (Printing.print_element clause);*)
-                                                    (*printf "literal w1: %s\n\n" (Printing.print_element w1);*)
-                                                   if is_true_i assignment w2 
+                                            | 0 -> if is_true_i assignment w2 
                                                    then (f_map, prop, conf)
                                                    else (
                                                          if is_assigned_i assignment w2 
@@ -1076,12 +1074,10 @@ let rec check_clause_i assignment f_map clause literal prop conf =
                                                                         | x :: xs -> (TWL_Map.add (Printing.print_element w1) 
                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
                                                                                            (TWL_Map.add (Printing.print_element w2) 
-                                                                                                        (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
+                                                                                                        ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
                                                                                                         (TWL_Map.add (Printing.print_element x) 
                                                                                                                      ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
-                                                                                                                     (TWL_Map.add (Printing.print_element w2) 
-                                                                                                                                  ((TWL_Map.find (Printing.print_element w2) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
-                                                                                                                                                 f_map))),
+                                                                                                                     f_map)),
                                                                                     prop, 
                                                                                     conf)
                                                                     )
@@ -1089,22 +1085,19 @@ let rec check_clause_i assignment f_map clause literal prop conf =
                                                          else (
                                                                match (unassigned_or_true_i assignment (Disjunction (ws))) with
                                                                 | [] -> (f_map, [w2], conf)
-                                                                | x :: xs ->  (TWL_Map.add (Printing.print_element w1) 
+                                                                | x :: xs -> (TWL_Map.add (Printing.print_element w1) 
                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
                                                                                            (TWL_Map.add (Printing.print_element w2) 
-                                                                                                        (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
+                                                                                                        ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
                                                                                                         (TWL_Map.add (Printing.print_element x) 
                                                                                                                      ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
-                                                                                                                     (TWL_Map.add (Printing.print_element w2) 
-                                                                                                                                  ((TWL_Map.find (Printing.print_element w2) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
-                                                                                                                                                 f_map))),
-                                                                               prop, 
-                                                                               conf)
+                                                                                                                     f_map)),
+                                                                             prop, 
+                                                                             conf)
                                                               )
                                                         )
                                             | _ -> (
-                                                    (*printf "clause: %s\n" (Printing.print_element clause);*)
-                                                    (*printf "literal w2: %s\n\n" (Printing.print_element w2);*) match (compare w2 literal) with
+                                                    match (compare w2 literal) with
                                                      | 0 -> if is_true_i assignment w1 
                                                             then (f_map, prop, conf)
                                                             else (
@@ -1115,37 +1108,101 @@ let rec check_clause_i assignment f_map clause literal prop conf =
                                                                           else (
                                                                                 match (unassigned_or_true_i assignment (Disjunction (ws))) with
                                                                                     | [] -> (f_map, prop, [clause])
-                                                                                    | x :: xs -> (*printf "rest of clause: %s\n\n" (Printing.print_element_list (x::xs));*) (TWL_Map.add (Printing.print_element w1) 
-                                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
-                                                                                                            (TWL_Map.add (Printing.print_element w2) 
-                                                                                                                        (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
-                                                                                                                        (TWL_Map.add (Printing.print_element x) 
-                                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
-                                                                                                                                        (TWL_Map.add (Printing.print_element w1) 
-                                                                                                                                                    ((TWL_Map.find (Printing.print_element w2) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
-                                                                                                                                                                    f_map))),
-                                                                                                prop, 
-                                                                                                conf)
+                                                                                    | x :: xs -> (TWL_Map.add (Printing.print_element w2) 
+                                                                                           (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
+                                                                                           (TWL_Map.add (Printing.print_element w1) 
+                                                                                                        ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                        (TWL_Map.add (Printing.print_element x) 
+                                                                                                                     ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                                     f_map)),
+                                                                                            prop, 
+                                                                                            conf)
                                                                                 )
                                                                          )
                                                                     else (
                                                                         match (unassigned_or_true_i assignment (Disjunction (ws))) with
                                                                             | [] -> (f_map, [w1], conf)
-                                                                            | x :: xs -> (*printf "rest of clause: %s\n\n" (Printing.print_element_list (x::xs));*) (TWL_Map.add (Printing.print_element w1) 
-                                                                                                      (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
-                                                                                                      (TWL_Map.add (Printing.print_element w2) 
-                                                                                                                   (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
-                                                                                                                   (TWL_Map.add (Printing.print_element x) 
-                                                                                                                                ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
-                                                                                                                                (TWL_Map.add (Printing.print_element w1) 
-                                                                                                                                             ((TWL_Map.find (Printing.print_element w2) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
-                                                                                                                                                            f_map))),
-                                                                                         prop, 
-                                                                                         conf)
+                                                                            | x :: xs -> (TWL_Map.add (Printing.print_element w2) 
+                                                                                           (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
+                                                                                           (TWL_Map.add (Printing.print_element w1) 
+                                                                                                        ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                        (TWL_Map.add (Printing.print_element x) 
+                                                                                                                     ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                                     f_map)),
+                                                                                            prop, 
+                                                                                            conf)
                                                                         )
                                                                     )
                                                      | _ -> failwith "[Invalid argument] check_clause_i: clause in wrong watch list"
                                                    )
+                                          *)
+                                          (
+                                           if is_clause_satisfied_i assignment clause 
+                                           then (f_map, prop, conf)
+                                           else (
+                                            match (compare w1 literal) with
+                                                | 0 ->  ( if is_assigned_i assignment w2 
+                                                            then (
+                                                                        match (unassigned_or_true_i assignment (Disjunction (ws))) with
+                                                                            | [] -> (f_map, prop, [clause])
+                                                                            | x :: xs -> (TWL_Map.add (Printing.print_element w1) 
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
+                                                                                            (TWL_Map.add (Printing.print_element w2) 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                            (TWL_Map.add (Printing.print_element x) 
+                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                                        f_map)),
+                                                                                        prop, 
+                                                                                        conf)
+                                                                        
+                                                                )
+                                                            else (
+                                                                match (unassigned_or_true_i assignment (Disjunction (ws))) with
+                                                                    | [] -> (f_map, [w2], conf)
+                                                                    | x :: xs -> (TWL_Map.add (Printing.print_element w1) 
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
+                                                                                            (TWL_Map.add (Printing.print_element w2) 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                            (TWL_Map.add (Printing.print_element x) 
+                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                                        f_map)),
+                                                                                prop, 
+                                                                                conf)
+                                                                )
+                                                            )
+                                                | _ -> (
+                                                        match (compare w2 literal) with
+                                                        | 0 -> ( if is_assigned_i assignment w1 
+                                                                        then (
+                                                                                    match (unassigned_or_true_i assignment (Disjunction (ws))) with
+                                                                                        | [] -> (f_map, prop, [clause])
+                                                                                        | x :: xs -> (TWL_Map.add (Printing.print_element w2) 
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
+                                                                                            (TWL_Map.add (Printing.print_element w1) 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                            (TWL_Map.add (Printing.print_element x) 
+                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                                        f_map)),
+                                                                                                prop, 
+                                                                                                conf)
+                                                                            )
+                                                                        else (
+                                                                            match (unassigned_or_true_i assignment (Disjunction (ws))) with
+                                                                                | [] -> (f_map, [w1], conf)
+                                                                                | x :: xs -> (TWL_Map.add (Printing.print_element w2) 
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
+                                                                                            (TWL_Map.add (Printing.print_element w1) 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                            (TWL_Map.add (Printing.print_element x) 
+                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                                        f_map)),
+                                                                                                prop, 
+                                                                                                conf)
+                                                                            )
+                                                                        )
+                                                        | _ -> failwith "[Invalid argument] check_clause_i: clause in wrong watch list"
+                                                    )
+                                            )
                                           )
         | _ -> failwith "[Invalid argument] check_clause_i";;
 
@@ -1193,10 +1250,10 @@ let rec choose_decision_literal assignment clause =
 
 let rec choose_decision_literal_i assignment clause = 
     match clause with
-        | Disjunction ([]) -> failwith "[Invalid argument] choose_decision_literal: clause does not contain a literal suited for decision"
+        | Disjunction ([]) -> []
         | Disjunction (x :: xs) -> if is_assigned_i assignment x 
                                    then choose_decision_literal_i assignment (Disjunction (xs))
-                                   else x
+                                   else [x]
         | _ -> failwith "[Invalid argument] choose_decision_literal: argument not a clause";;
 
 let rec decision_twl formula assignment f_map dl =
@@ -1254,7 +1311,7 @@ let backjump_twl assignment formula conf =
                              );;
 
 let backjump_twl_i assignment formula conf = 
-    match assignment with 
+    (*printf "BACKJUMP\n";*) match assignment with 
         | Assignment (xs) -> (
                               match (find_backjump_clause_i xs formula conf) with
                                 |(Disjunction (ys)) -> (
@@ -1345,11 +1402,13 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
                     | (sf_assignment, cs) -> ( 
                                               (*Printing.print_assignment assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*) 
                                               match Simplex.simplex sf_assignment with
-                                                | Some (x) -> (
+                                                | Some (x) -> (*
                                                                match x with
                                                                 | Mapping (RBT (Empty)) -> (*printf "Maybe\n";*) true
                                                                 | Mapping (RBT (_)) -> true
-                                                              )
+                                                              *)
+                                                              (*Printing.print_assignment assignment; printf "\n\n";*)
+                                                              true
                                                 | None -> (
                                                            match cs with 
                                                             | Assignment ([z]) -> (
@@ -1374,7 +1433,7 @@ let rec dpll_twl_rec assignment formula f_map literals dl =
                                                       | [] -> (
                                                                match (Util.to_simplex_format_init n_assignment) with 
                                                                     | (sf_assignment, cs) -> ( 
-                                                                                            (*Printing.print_assignment n_assignment; printf "\n\n";*) (*Printing.print_simplex_constraints sf_assignment;*)
+                                                                                            (*Printing.print_assignment n_assignment; printf "\n\n"; Printing.print_simplex_constraints sf_assignment; printf "\n\n";*)
                                                                                              match Simplex.simplex sf_assignment with
                                                                                                 | Some (x) -> dpll_twl_rec n_assignment formula n_map literals new_dl
                                                                                                 | None -> (
@@ -1505,6 +1564,81 @@ let rec reset_checkpoints_rec cps dl result =
                            );;
 
 let reset_checkpoints cps dl = reset_checkpoints_rec cps dl [];;
+
+(*let rec backjump_to_conflictless_state_rec formula assignment assignment_mutable checkpoints bj_dl state result =
+    match (assignment_mutable, bj_dl) with
+        | (Assignment ([]), _) -> failwith "[Invalid argument] backjump_to_t_consistent_state_rec: target decision level too high"
+        | (Assignment (_), 1) -> ([], checkpoints, state, 0, Atom (AuxVar (-1)))
+        | (Assignment (_), 0) -> ([], checkpoints, state, 0, Atom (AuxVar (-1)))
+        | (Assignment ((c, v, d, dl) :: xs), _) -> if dl = (bj_dl - 1)
+                                                   then (
+                                                    if (conflict_exists_i (Assignment (result)) formula) 
+                                                    then backjump_to_conflictless_state_rec formula assignment assignment checkpoints (dl - 1) state []
+                                                    else (
+                                                          match v with
+                                                            | true -> (result @ [(c, false, false, dl - 1)], (reset_checkpoints checkpoints (dl - 1)), (Simplex_inc.backtrack_simplex (get_checkpoint checkpoints (dl - 1)) state), (dl - 1), Atom (c))
+                                                            | false -> (result @ [(c, true, false, dl - 1)], (reset_checkpoints checkpoints (dl - 1)), (Simplex_inc.backtrack_simplex (get_checkpoint checkpoints (dl - 1)) state), (dl - 1), Not (Atom (c)))
+                                                         )
+                                                   )
+                                                   else backjump_to_conflictless_state_rec formula assignment (Assignment (xs)) checkpoints dl state (result @ [(c, v, d, dl)]);;
+
+let backjump_to_conflictless_state formula assignment checkpoints dl state = backjump_to_conflictless_state_rec formula assignment assignment checkpoints dl state [];;*)
+
+let rec minimal_assignment_for_unsat_core_rec assignment unsat_core result = 
+    (*printf "minimal_assignment\n\n";*) match assignment with
+        | Assignment ([]) -> failwith "[Invalid argument] minimal_assignment_for_unsat_core_rec"
+        | Assignment (x :: xs) -> (
+                                   match (unassigned_or_true_i (Assignment (result @ [x])) unsat_core) with
+                                    | [] -> (result @ [x])
+                                    | ys -> minimal_assignment_for_unsat_core_rec (Assignment (xs)) unsat_core (result @ [x])
+                                  );;
+
+let minimal_assignment_for_unsat_core assignment unsat_core = (*printf "BACKJUMP\n\n";*) minimal_assignment_for_unsat_core_rec assignment unsat_core [];;
+
+let rec t_backjump formula assignment limit = 
+    (*printf "T_BJ\n\n";*) match assignment with
+        | [] -> (assignment, Atom (AuxVar (-1)), false)
+        | (c, v, d, dl) :: xs -> (
+                                  (*match d with
+                                    | false -> t_backjump formula xs
+                                    | true -> (
+                                               match v with
+                                                | true -> if (conflict_exists_i (Assignment (rev ((c, false, false, dl - 1) :: xs))) formula)
+                                                          then (
+                                                                if dl < 1
+                                                                then (rev assignment, Atom (c), false)
+                                                                else t_backjump formula xs
+                                                                )
+                                                          else (rev ((c, false, false, dl - 1) :: xs), Atom (c), true)
+                                                | false -> if (conflict_exists_i (Assignment (rev ((c, true, false, dl - 1) :: xs))) formula)
+                                                          then (
+                                                                if dl < 1
+                                                                then (rev assignment, Not (Atom (c)), false)
+                                                                else t_backjump formula xs
+                                                                )
+                                                          else (rev ((c, true, false, dl - 1) :: xs), Not (Atom (c)), true)
+                                              )*)
+
+                                    match d with
+                                        | false -> t_backjump formula xs limit
+                                        | true -> (
+                                                   match v with
+                                                    | true -> if (conflict_exists_i (Assignment (rev ((c, false, false, dl - 1) :: xs))) formula)
+                                                              then (
+                                                                    if limit > 0
+                                                                    then t_backjump formula xs (limit - 1)
+                                                                    else (rev ((c, false, false, dl - 1) :: xs), Atom (c), false)
+                                                                   )
+                                                              else (rev ((c, false, false, dl - 1) :: xs), Atom (c), true)
+                                                    | false -> if (conflict_exists_i (Assignment (rev ((c, true, false, dl - 1) :: xs))) formula)
+                                                               then (
+                                                                     if limit > 0
+                                                                     then t_backjump formula xs (limit - 1)
+                                                                     else (rev ((c, true, false, dl - 1) :: xs), Not (Atom (c)), false)
+                                                                    )
+                                                               else (rev ((c, true, false, dl - 1) :: xs), Not (Atom (c)), true)
+                                                  )
+                                 );;
 
 let rec preprocess_unit_clauses_inc_rec formula new_formula new_assignment prop conf s_state i_map inv_map to_update =
     match formula with 
@@ -1640,61 +1774,63 @@ let rec decision_twl_inc formula assignment f_map s_state i_map inv_map dl =
 
 let rec decision_twl_inc_i formula assignment f_map s_state i_map inv_map dl =
     (*printf "DECISION\n\n";*) match formula with
+     | Formula (Conjunction ([])) -> (assignment, f_map, dl, s_state, [], [], true)
      | Formula (Conjunction (cs)) -> ( 
-                                    match contains_unassigned_literal_i assignment (hd cs) with
+                                    (*match contains_unassigned_literal_i assignment (hd cs) with
                                         | false -> decision_twl_inc_i (Formula (Conjunction (tl cs))) assignment f_map s_state i_map inv_map dl
-                                        | true -> (
+                                        | true -> ( *)
                                                     let Assignment (xs) = assignment in
-                                                    match choose_decision_literal_i assignment (hd cs) with
-                                                        | Atom (x) -> (*printf "decision literal: %s\n\n" (Printing.print_constraint_n x);*)
+                                                    match (choose_decision_literal_i assignment (hd cs)) with
+                                                        | [] -> decision_twl_inc_i (Formula (Conjunction (tl cs))) assignment f_map s_state i_map inv_map dl
+                                                        | [Atom (x)] -> (*printf "decision literal: %s\n\n" (Printing.print_constraint_n x);*)
                                                                     if is_proper_constraint x
                                                                     then (
                                                                           match x with 
                                                                             | Constraint (y) -> (
                                                                                                  match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n x) i_map))) s_state with
-                                                                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map)
+                                                                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map, false)
                                                                                                     | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (x))) in 
-                                                                                                                            (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf)
+                                                                                                                            (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf, false)
                                                                                                 )   
                                                                             | Index (y) -> (
                                                                                             let (s, v, d, tmp_dl) = (Tseitin.Inv_Map.find y inv_map) in
                                                                                             (*printf ("decision, atom: %s\n") (Printing.print_constraint_n s);*)
                                                                                             match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int y)) s_state with
-                                                                                                | Inl (unsat_core) -> (*printf "unsat_core\n";*) (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map)
+                                                                                                | Inl (unsat_core) -> (*printf "unsat_core\n";*) (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map, false)
                                                                                                 | Inr (n_state) -> (*printf "state\n";*) let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (x))) in 
-                                                                                                                        (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf)
+                                                                                                                        (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf, false)
                                                                                            )   
                                                                         )
                                                                     else (  
                                                                             let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Not (Atom (x))) in 
-                                                                                (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, s_state, prop, conf)
+                                                                                (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, s_state, prop, conf, false)
                                                                         )
-                                                        | Not (Atom (x)) -> (*printf "decision literal: Not %s\n\n" (Printing.print_constraint_n x);*) 
+                                                        | [Not (Atom (x))] -> (*printf "decision literal: Not %s\n\n" (Printing.print_constraint_n x);*) 
                                                                             if is_proper_constraint x
                                                                             then (
                                                                                   match x with
                                                                                     | Constraint (y) -> (
                                                                                                         match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n x) i_map))) s_state with
-                                                                                                            | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map)
+                                                                                                            | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map, false)
                                                                                                             | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Atom (x)) in 
-                                                                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf) 
+                                                                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf, false) 
                                                                                                         )
                                                                                     | Index (y) -> (
                                                                                                     let (c, v, d, tmp_dl) = (Tseitin.Inv_Map.find y inv_map) in 
                                                                                                     (*printf ("decision, not atom: %s\n") (Printing.print_constraint_n c);*)
                                                                                                     match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map))) s_state with
-                                                                                                        | Inl (unsat_core) -> (*printf "unsat_core\n";*) (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map)
+                                                                                                        | Inl (unsat_core) -> (*printf "unsat_core\n";*) (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, s_state, [], convert_unsat_core_i unsat_core i_map inv_map, false)
                                                                                                         | Inr (n_state) -> (*printf "state\n";*) let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Atom (x)) in 
-                                                                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf) 
+                                                                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, n_state, prop, conf, false) 
                                                                                                    )
                                                                                 )
                                                                             else (
                                                                                 let (new_map, prop, conf) = update_watch_lists_i assignment f_map (Atom (x)) in
-                                                                                    (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, s_state, prop, conf) 
+                                                                                    (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, s_state, prop, conf, false) 
                                                                                 )
                                                         | _ -> failwith "[Invalid argument] decision_twl_inc: choose_decision_literal did not return a literal"
                                                 )
-                                     )
+                                     (*)*)
      | _ -> failwith "[Invalid argument] decision_twl_inc: formula not in CNF";;
 
 let rec unit_propagation_twl_inc assignment f_map s_state i_map inv_map prop dl = 
@@ -1864,7 +2000,7 @@ let rec reassert_after_restart_rec assignment i_map inv_map state conf =
         | _ -> failwith "[Invalid argument] reassert_after_restart_rec";;
 
 
-let reassert_after_restart assignment i_map inv_map state = (*printf "REASSERT\n";*) reassert_after_restart_rec assignment i_map inv_map state [];;
+let reassert_after_restart assignment i_map inv_map state = (* printf "REASSERT\n";*) reassert_after_restart_rec assignment i_map inv_map state [];;
 
 let assert_backjump l i_map inv_map state = 
     match l with 
@@ -1875,12 +2011,20 @@ let assert_backjump l i_map inv_map state =
                                                 (
                                                  match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Printing.print_constraint_n c)) i_map))) state with
                                                     | Inl (unsat_core) -> (state, unsat_core)
-                                                    | Inr (n_state) -> (n_state, [])
+                                                    | Inr (n_state) -> (
+                                                                        match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) n_state with
+                                                                            | Inl (n_unsat_core) -> (n_state, n_unsat_core)
+                                                                            | Inr (new_state) -> (new_state, [])
+                                                                       )
                                                 )
                                 | Constraint (y) -> (
                                                     match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ (Printing.print_constraint_n x)) i_map))) state with
                                                         | Inl (unsat_core) -> (state, unsat_core)
-                                                        | Inr (n_state) -> (n_state, [])
+                                                        | Inr (n_state) -> (
+                                                                            match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) n_state with
+                                                                                | Inl (n_unsat_core) -> (n_state, n_unsat_core)
+                                                                                | Inr (new_state) -> (new_state, [])
+                                                                           )
                                                     )
                                 | _ -> failwith "[Invalid argument] assert_backjump"
                             )
@@ -1891,12 +2035,20 @@ let assert_backjump l i_map inv_map state =
                                     | Index (y) -> (
                                                     match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int y)) state with
                                                         | Inl (unsat_core) -> (state, unsat_core)
-                                                        | Inr (n_state) -> (n_state, [])
+                                                        | Inr (n_state) -> (
+                                                                            match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) n_state with
+                                                                                | Inl (n_unsat_core) -> (n_state, n_unsat_core)
+                                                                                | Inr (new_state) -> (new_state, [])
+                                                                           )
                                                    )
                                     | Constraint (y) -> (
                                                     match Simplex_inc.assert_simplex Simplex_inc.equal_nat (Simplex_inc.lrv_QDelta, Simplex_inc.equal_QDelta) (Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n x) i_map))) state with
                                                         | Inl (unsat_core) -> (state, unsat_core)
-                                                        | Inr (n_state) -> (n_state, [])
+                                                        | Inr (n_state) -> (
+                                                                            match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) n_state with
+                                                                                | Inl (n_unsat_core) -> (n_state, n_unsat_core)
+                                                                                | Inr (new_state) -> (new_state, [])
+                                                                           )
                                                    )
                                     | _ -> failwith "[Invalid argument] assert_backjump"
                                  )
@@ -2113,32 +2265,137 @@ and restart_twl_inc_unit assignment formula f_map s_state checkpoints i_map inv_
                                     )
                                  );;
 
-let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map inv_map dl =
-     (*Printing.print_assignment assignment; printf "\n\n";*) match model_found_twl_i assignment formula with
+let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map inv_map dl conf_count =
+     (*Printing.print_assignment assignment; printf "\n\n";*) (*match model_found_twl_i assignment formula with
         | true -> (
                     (*Printing.print_simplex_constraints sf_assignment;*) 
                    match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) s_state with
                     | Simplex_inc.Inl (unsat_core) -> if dl < 1
-                                                      then false
+                                                      then (false)
                                                       else let (num, cp) = hd (checkpoints) in
                                                             let r_state = Simplex_inc.backtrack_simplex cp s_state in
-                                                            let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
-                                                                (*printf "RESTART\n\n";*)
-                                                                restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map f_map ys) r_state [hd (checkpoints)] i_map inv_map
+                                                            (*let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
+                                                                (*printf "RESTART_MODEL\n\n";*)
+                                                                restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map f_map ys) r_state [hd (checkpoints)] i_map inv_map*)
+                                                                (
+                                                                 match length unsat_core with 
+                                                                    | 0 -> failwith "[Invalid argument] unsat core empty"
+                                                                    | 1 -> (
+                                                                            (*printf "RESTART_UNIT\n\n";*) match (hd (convert_unsat_core_i unsat_core i_map inv_map)) with
+                                                                                | Atom (y) -> restart_twl_inc_i_unit assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y false
+                                                                                | Not (Atom (y)) -> restart_twl_inc_i_unit assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
+                                                                                | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: unsat_core does not consist of literals"
+                                                                            )
+                                                                    | _ -> let Disjunction (u_core) = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
+                                                                             if conf_count > 75
+                                                                             then (restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map)
+                                                                            else (
+                                                                             (*
+                                                                             match t_backjump formula (rev (minimal_assignment_for_unsat_core assignment (Disjunction (u_core)))) 1 with
+                                                                              | (ys, _, false) -> restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map
+                                                                              | (ys, l, true) ->*) let (ys, l, bj_clause) = (backjump_twl_i assignment (learn formula (Disjunction (u_core))) (hd u_core)) in 
+                                                                                                    let (bj_map, _, _) = update_watch_lists_i ys f_map l in
+                                                                                                  let cdl = (get_current_decision_level ys) in
+                                                                                                    let cp = get_checkpoint checkpoints cdl in 
+                                                                                                     let b_state = Simplex_inc.backtrack_simplex cp s_state in
+                                                                                                      let (bj_state, bj_u_core) = assert_backjump l i_map inv_map b_state in
+                                                                                                       (
+                                                                                                        match (length bj_u_core) with
+                                                                                                            | 0 -> (
+                                                                                                                    (*printf "BACKJUMP\n\n";*) match (bj_clause, (conflict_exists_i ys (learn formula (Disjunction (u_core))))) with
+                                                                                                                        | (_, true) -> restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map
+                                                                                                                        | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints checkpoints cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                                                        | (Disjunction ([v]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints checkpoints cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                                                        | (Disjunction (vs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map (Disjunction (u_core))) bj_state (reset_checkpoints checkpoints cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                                                        | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
+                                                                                                                )
+                                                                                                            | _ -> (
+                                                                                                                    (*printf "bj_cons\n\n";*) match backjump_to_t_consistent_state ys checkpoints i_map inv_map cdl b_state with 
+                                                                                                                    | ([], _, _, _, _) -> restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map
+                                                                                                                    | (cons_assignment, cons_cps, cons_state, cons_dl, cons_l) -> let (cons_map, _, _) = update_watch_lists_i (Assignment (cons_assignment)) f_map cons_l in
+                                                                                                                                                                        dpll_twl_inc_i_rec (Assignment (cons_assignment)) (learn formula (Disjunction (u_core))) cons_map cons_state cons_cps i_map inv_map cons_dl (conf_count + 1)
+                                                                                                                )
+
+                                                                                                        )
+                                                                            )
+                                                                )
+                                                                                          
                     | Simplex_inc.Inr (n_state) -> (* According to my understanding this is sufficient info to determine that formula is SAT *)
                                                     (*Printing.print_assignment assignment; printf "\n\n";*)
                                                     (*let (c, _, _, _) = (Tseitin.Inv_Map.find 26 inv_map) in
                                                     printf "%s\n\n" (Printing.print_constraint_n c);*)
                                                     true
                   )
-        | false -> let new_cps = checkpoints @ [(dl, Simplex_inc.checkpoint_simplex s_state)] in
-                    let (new_assignment, new_map, new_dl, new_state, prop, conf) = decision_twl_inc_i formula assignment f_map s_state i_map inv_map dl in 
+        | false ->*) 
+            let new_cps = checkpoints @ [(dl, Simplex_inc.checkpoint_simplex s_state)] in
+                    (*let (new_assignment, new_map, new_dl, new_state, prop, conf) = *)
+                match decision_twl_inc_i formula assignment f_map s_state i_map inv_map dl with
+                    | (_, _, _, _, _, _, true) -> (
+                            (*Printing.print_simplex_constraints sf_assignment;*) 
+                        match Simplex_inc.check_simplex (Simplex_inc.equal_nat, Simplex_inc.linorder_nat) s_state with
+                            | Simplex_inc.Inl (unsat_core) -> if dl < 1
+                                                            then (false)
+                                                            else let (num, cp) = hd (checkpoints) in
+                                                                    let r_state = Simplex_inc.backtrack_simplex cp s_state in
+                                                                    (*let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
+                                                                        (*printf "RESTART_MODEL\n\n";*)
+                                                                        restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map f_map ys) r_state [hd (checkpoints)] i_map inv_map*)
+                                                                        (
+                                                                        match length unsat_core with 
+                                                                            | 0 -> failwith "[Invalid argument] unsat core empty"
+                                                                            | 1 -> (
+                                                                                    (*printf "RESTART_UNIT\n\n";*) match (hd (convert_unsat_core_i unsat_core i_map inv_map)) with
+                                                                                        | Atom (y) -> restart_twl_inc_i_unit assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y false
+                                                                                        | Not (Atom (y)) -> restart_twl_inc_i_unit assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
+                                                                                        | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: unsat_core does not consist of literals"
+                                                                                    )
+                                                                            | _ -> let Disjunction (u_core) = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
+                                                                                    if conf_count > 75
+                                                                                    then (restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map)
+                                                                                    else (
+                                                                                    (*
+                                                                                    match t_backjump formula (rev (minimal_assignment_for_unsat_core assignment (Disjunction (u_core)))) 1 with
+                                                                                    | (ys, _, false) -> restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map
+                                                                                    | (ys, l, true) ->*) let (ys, l, bj_clause) = (backjump_twl_i assignment (learn formula (Disjunction (u_core))) (hd u_core)) in 
+                                                                                                            let (bj_map, _, _) = update_watch_lists_i ys f_map l in
+                                                                                                        let cdl = (get_current_decision_level ys) in
+                                                                                                            let cp = get_checkpoint checkpoints cdl in 
+                                                                                                            let b_state = Simplex_inc.backtrack_simplex cp s_state in
+                                                                                                            let (bj_state, bj_u_core) = assert_backjump l i_map inv_map b_state in
+                                                                                                            (
+                                                                                                                match (length bj_u_core) with
+                                                                                                                    | 0 -> (
+                                                                                                                            (*printf "BACKJUMP\n\n";*) match (bj_clause, (conflict_exists_i ys (learn formula (Disjunction (u_core))))) with
+                                                                                                                                | (_, true) -> restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map
+                                                                                                                                | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints checkpoints cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                                                                | (Disjunction ([v]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints checkpoints cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                                                                | (Disjunction (vs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map (Disjunction (u_core))) bj_state (reset_checkpoints checkpoints cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                                                                | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
+                                                                                                                        )
+                                                                                                                    | _ -> (
+                                                                                                                            (*printf "bj_cons\n\n";*) match backjump_to_t_consistent_state ys checkpoints i_map inv_map cdl b_state with 
+                                                                                                                            | ([], _, _, _, _) -> restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map
+                                                                                                                            | (cons_assignment, cons_cps, cons_state, cons_dl, cons_l) -> let (cons_map, _, _) = update_watch_lists_i (Assignment (cons_assignment)) f_map cons_l in
+                                                                                                                                                                                dpll_twl_inc_i_rec (Assignment (cons_assignment)) (learn formula (Disjunction (u_core))) cons_map cons_state cons_cps i_map inv_map cons_dl (conf_count + 1)
+                                                                                                                        )
+
+                                                                                                                )
+                                                                                    )
+                                                                        )
+                                                                                                
+                            | Simplex_inc.Inr (n_state) -> (* According to my understanding this is sufficient info to determine that formula is SAT *)
+                                                            (*Printing.print_assignment assignment; printf "\n\n";*)
+                                                            (*let (c, _, _, _) = (Tseitin.Inv_Map.find 26 inv_map) in
+                                                            printf "%s\n\n" (Printing.print_constraint_n c);*)
+                                                            true
+                        )
+                | (new_assignment, new_map, new_dl, new_state, prop, conf, false) ->
                     (
                      (*printf "D: "; Printing.print_assignment new_assignment; printf "\n\n";*)
                      match conf with 
                         | [] -> (
                                  match prop with
-                                    | [] -> dpll_twl_inc_i_rec new_assignment formula new_map new_state new_cps i_map inv_map new_dl
+                                    | [] -> dpll_twl_inc_i_rec new_assignment formula new_map new_state new_cps i_map inv_map new_dl (conf_count)
                                     | x :: xs -> let (n_assignment, n_map, n_state, n_conf) = unit_propagation_twl_inc_i new_assignment new_map new_state i_map inv_map prop new_dl in 
                                                     (
                                                      (*printf "UP: "; Printing.print_assignment n_assignment; printf "\n\n";*)
@@ -2156,13 +2413,48 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
                                                                                                         | Not (Atom (y)) -> restart_twl_inc_i_unit new_assignment formula f_map r_state [hd (checkpoints)] i_map inv_map y true
                                                                                                         | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: unsat_core does not consist of literals"
                                                                                                    )
-                                                                                            | _ -> let ys = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
-                                                                                                    (*printf "RESTART\n\n";*) restart_twl_inc_i assignment (learn formula ys) (add_clause_to_map n_map ys) r_state [hd (checkpoints)] i_map inv_map
+                                                                                            | _ -> let Disjunction (u_core) = clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map) in 
+                                                                                                    if conf_count > 50
+                                                                                                    then ( restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map n_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map)
+                                                                                                    else (
+                                                                                                    (*match t_backjump formula (rev (minimal_assignment_for_unsat_core n_assignment (Disjunction (u_core)))) 1 with
+                                                                                                    | (ys, _, false) -> restart_twl_inc_i assignment (learn formula (Disjunction (u_core))) (add_clause_to_map n_map (Disjunction (u_core))) r_state [hd (checkpoints)] i_map inv_map
+                                                                                                    | (ys, l, true) ->*) let (ys, l, bj_clause) = (backjump_twl_i n_assignment (learn formula (Disjunction (u_core))) (hd u_core)) in 
+                                                                                                                        let (bj_map, _, _) = update_watch_lists_i ys f_map l in
+                                                                                                                        let cdl = (get_current_decision_level ys) in
+                                                                                                                         let cp = get_checkpoint new_cps cdl in 
+                                                                                                                          let b_state = Simplex_inc.backtrack_simplex cp s_state in
+                                                                                                                            let (bj_state, bj_u_core) = assert_backjump l i_map inv_map b_state in
+                                                                                                                            (
+                                                                                                                                match (length bj_u_core) with
+                                                                                                                                    | 0 -> (
+                                                                                                                                            (*printf "BACKJUMP\n\n";*) match (bj_clause, (conflict_exists_i ys (learn formula (Disjunction (u_core))))) with
+                                                                                                                                                | (_, true) -> restart_twl_inc_i n_assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (new_cps)] i_map inv_map
+                                                                                                                                                | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                                                                                | (Disjunction ([v]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                                                                                | (Disjunction (vs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map (Disjunction (u_core))) bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                                                                                | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
+                                                                                                                                        )
+                                                                                                                                    | _ -> (
+                                                                                                                                            (*printf "bj_cons\n\n";*) match backjump_to_t_consistent_state ys new_cps i_map inv_map cdl b_state with 
+                                                                                                                                            | ([], _, _, _, _) -> restart_twl_inc_i n_assignment (learn formula (Disjunction (u_core))) (add_clause_to_map f_map (Disjunction (u_core))) r_state [hd (new_cps)] i_map inv_map
+                                                                                                                                            | (cons_assignment, cons_cps, cons_state, cons_dl, cons_l) -> let (cons_map, _, _) = update_watch_lists_i (Assignment (cons_assignment)) f_map cons_l in
+                                                                                                                                                                                                dpll_twl_inc_i_rec (Assignment (cons_assignment)) (learn formula (Disjunction (u_core))) cons_map cons_state cons_cps i_map inv_map cons_dl (conf_count + 1)
+                                                                                                                                        )
+
+                                                                                                                                )
+                                                                                                    )
                                                                                           )
-                                                                    | Inr (state) -> dpll_twl_inc_i_rec n_assignment formula n_map state new_cps i_map inv_map new_dl
+                                                                    | Inr (state) -> dpll_twl_inc_i_rec n_assignment formula n_map state new_cps i_map inv_map new_dl (conf_count)
                                                                )
                                                       | z :: zs -> (*printf "non-empty conf\n\n";
                                                                     printf "n_conf: %s\n\n" (Printing.print_element_list n_conf);*)
+                                                                    (*if conf_count > 50
+                                                                    then ( let (num, cp) = hd (checkpoints) in
+                                                                            let r_state = Simplex_inc.backtrack_simplex cp n_state in
+                                                                             let Disjunction (conf_list) = z in let ys = (clauselist_to_neg_clause (conf_list)) in 
+                                                                                restart_twl_inc_i n_assignment (learn formula ys) (add_clause_to_map n_map ys) r_state [hd (checkpoints)] i_map inv_map)
+                                                                    else *)
                                                                     (
                                                                     let (ys, l, bj_clause) = (backjump_twl_i n_assignment formula (hd n_conf)) in 
                                                                      let (bj_map, _, _) = update_watch_lists_i ys new_map l in
@@ -2175,16 +2467,16 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
                                                                             | 0 -> (
                                                                                     (*printf "BACKJUMP\n\n";*) match (bj_clause, (conflict_exists_i ys formula)) with
                                                                                         | (_, true) -> false
-                                                                                        | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                                                                        | (Disjunction ([v]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                                                                        | (Disjunction (vs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map bj_clause) bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                                                                        | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                        | (Disjunction ([v]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl (conf_count + 1)
+                                                                                        | (Disjunction (vs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map bj_clause) bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl (conf_count + 1)
                                                                                         | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
                                                                                    )
                                                                             | _ -> (
-                                                                                    match backjump_to_t_consistent_state ys new_cps i_map inv_map cdl b_state with 
+                                                                                    (*printf "bj_cons\n\n";*) match backjump_to_t_consistent_state ys new_cps i_map inv_map cdl b_state with 
                                                                                      | ([], _, _, _, _) -> false
                                                                                      | (cons_assignment, cons_cps, cons_state, cons_dl, cons_l) -> let (cons_map, _, _) = update_watch_lists_i (Assignment (cons_assignment)) new_map cons_l in
-                                                                                                                                          dpll_twl_inc_i_rec (Assignment (cons_assignment)) formula cons_map cons_state cons_cps i_map inv_map cons_dl
+                                                                                                                                          dpll_twl_inc_i_rec (Assignment (cons_assignment)) formula cons_map cons_state cons_cps i_map inv_map cons_dl (conf_count + 1)
                                                                                    )
 
                                                                          )
@@ -2193,6 +2485,12 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
                                 )
                         | x :: xs -> (*printf "non-empty conf\n\n";
                                      printf "conf: %s\n\n" (Printing.print_element_list conf);*)
+                                    (* if conf_count > 50
+                                    then ( let Disjunction (conf_list) = x in let ys = (clauselist_to_neg_clause (conf_list)) in 
+                                            let (num, cp) = hd (checkpoints) in
+                                             let r_state = Simplex_inc.backtrack_simplex cp s_state in 
+                                              restart_twl_inc_i new_assignment (learn formula ys) (add_clause_to_map new_map ys) r_state [hd (checkpoints)] i_map inv_map)
+                                    else *)
                                      (
                                      let (ys, l, bj_clause) = (backjump_twl_i new_assignment formula (hd conf)) in 
                                      let (bj_map, _, _) = update_watch_lists_i ys new_map l in
@@ -2205,16 +2503,16 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
                                                 | 0 -> (
                                                         (*printf "BACKJUMP\n\n";*) match (bj_clause, (conflict_exists_i ys formula)) with
                                                         | (_, true) -> false
-                                                        | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                                        | (Disjunction ([v]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
-                                                        | (Disjunction (vs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map bj_clause) bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl
+                                                        | (Disjunction ([]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl (conf_count + 1)
+                                                        | (Disjunction ([v]), false) -> dpll_twl_inc_i_rec ys formula bj_map bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl (conf_count + 1)
+                                                        | (Disjunction (vs), false) -> let formula_l = (learn formula bj_clause) in dpll_twl_inc_i_rec ys formula_l (add_clause_to_map bj_map bj_clause) bj_state (reset_checkpoints new_cps cdl) i_map inv_map cdl (conf_count + 1)
                                                         | _ -> failwith "[Invalid argument] dpll_twl_inc_rec: backjump clause not a clause"
                                                         )
                                                 | _ -> (
-                                                        match backjump_to_t_consistent_state ys new_cps i_map inv_map cdl b_state with 
+                                                        (*printf "bj_cons\n\n";*) match backjump_to_t_consistent_state ys new_cps i_map inv_map cdl b_state with 
                                                         | ([], _, _, _, _) -> false
                                                         | (cons_assignment, cons_cps, cons_state, cons_dl, cons_l) -> let (cons_map, _, _) = update_watch_lists_i (Assignment (cons_assignment)) new_map cons_l in
-                                                                                                                    dpll_twl_inc_i_rec (Assignment (cons_assignment)) formula  cons_map cons_state cons_cps i_map inv_map cons_dl
+                                                                                                                    dpll_twl_inc_i_rec (Assignment (cons_assignment)) formula  cons_map cons_state cons_cps i_map inv_map cons_dl (conf_count + 1)
                                                       )
                                             )
                                      )         
@@ -2223,7 +2521,7 @@ let rec dpll_twl_inc_i_rec assignment formula f_map s_state checkpoints i_map in
 
 and dpll_twl_inc_i formula i_map inv_map s_state checkpoints = 
                 let (new_formula, new_assignment, prop, conf_unit, new_state, to_update) = preprocess_unit_clauses_inc_i (Assignment ([])) formula s_state i_map inv_map in 
-                        (* Printing.print_formula new_formula; printf "\n\n"; *)
+                         (*Printing.print_formula new_formula; printf "\n\n"; *)
                         if conf_unit 
                         then false
                         else (
@@ -2232,41 +2530,41 @@ and dpll_twl_inc_i formula i_map inv_map s_state checkpoints =
                                     let (n_assignment, n_map, n_state, conf) = unit_propagation_twl_inc_i new_assignment f_map_new new_state i_map inv_map prop 0 in 
                                         (
                                         match conf with
-                                            | [] -> dpll_twl_inc_i_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0
+                                            | [] -> dpll_twl_inc_i_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0 0
                                             | x :: xs -> false
                                         )
                             )
 
 and restart_twl_inc_i assignment formula f_map s_state checkpoints i_map inv_map = 
-                        let (new_formula, new_assignment, prop, conf_unit, new_state, to_update) = preprocess_unit_clauses_inc_i (preserve_unit_assignments assignment) formula s_state i_map inv_map in 
+                        (*printf "RESTART\n";*) let (new_formula, new_assignment, prop, conf_unit, new_state, to_update) = preprocess_unit_clauses_inc_i (preserve_unit_assignments assignment) formula s_state i_map inv_map in 
                             if conf_unit
                             then false
                             else (let (ra_state, ra_conf) = reassert_after_restart new_assignment i_map inv_map new_state in
                                     (*printf "POST_REASSERT\n\n";*) (
                                      if length ra_conf > 0
-                                     then false
+                                     then (printf "unsat after restart + reassert\n\n"; false)
                                      else (
                                            let (f_map_new, prop_new, conf_new) = update_watch_lists_i_l new_assignment f_map to_update in
                                             let (n_assignment, n_map, n_state, conf) = unit_propagation_twl_inc_i new_assignment f_map_new ra_state i_map inv_map prop 0 in 
                                                 (
                                                 match conf with
                                                     | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) 
-                                                        dpll_twl_inc_i_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0
-                                                    | x :: xs -> false
+                                                        dpll_twl_inc_i_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map 0 0
+                                                    | x :: xs -> printf "unsat after restart + unit propagation\n\n"; false
                                                 )
                                           )
                                     )
                                  )
                                                 
 and restart_twl_inc_i_unit assignment formula f_map s_state checkpoints i_map inv_map unit_literal lit_val = 
-                        let (new_formula, new_assignment, prop, conf_unit, new_state, to_update) = preprocess_unit_clauses_inc_i (preserve_unit_assignments assignment) formula s_state i_map inv_map in
+                        (*printf "RESTART_UNIT\n";*) let (new_formula, new_assignment, prop, conf_unit, new_state, to_update) = preprocess_unit_clauses_inc_i (preserve_unit_assignments assignment) formula s_state i_map inv_map in
                             (*Printing.print_assignment new_assignment; printf "\n\n";*) if conf_unit
                             then false
                             else (
                                   let (ra_state, ra_conf) = reassert_after_restart new_assignment i_map inv_map new_state in
                                     (*printf "POST_REASSERT\n\n";*) (
                                      if length ra_conf > 0
-                                     then false
+                                     then (printf "unsat after restart_unit + reassert\n\n"; false)
                                      else (
                                            let (f_map_new, prop_new, conf_new) = update_watch_lists_i_l new_assignment f_map to_update in
                                              let Assignment (xs) = new_assignment in
@@ -2277,8 +2575,8 @@ and restart_twl_inc_i_unit assignment formula f_map s_state checkpoints i_map in
                                                     (
                                                     match conf with
                                                         | [] -> (*Printing.print_formula new_formula; printf "\n\n";*) 
-                                                                dpll_twl_inc_i_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map  0
-                                                        | x :: xs -> false
+                                                                dpll_twl_inc_i_rec n_assignment new_formula n_map n_state checkpoints i_map inv_map  0 0
+                                                        | x :: xs -> printf "unsat after restart_unit + unit propagation\n\n"; false
                                                     )
                                                   )
                                           )

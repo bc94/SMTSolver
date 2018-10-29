@@ -305,7 +305,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                         )
                                                         | (Var (x), Sum (s)) ->
                                                                         ( 
-                                                                         match (transform_constraint (Var (x), Sum (s))) with 
+                                                                         match (transform_constraint_var_sum_geq (Var (x), Sum (s))) with 
                                                                             | (Num (n), sums) -> (
                                                                                             match (op_to_simplex_format sums varlist varcount) with
                                                                                             | (s_lp, newlist, newcount) -> 
@@ -449,7 +449,7 @@ let rec to_simplex_format assignment varlist varcount result cs =
                                                                                                 )
                                                                                        )
                                                                              | false -> ( 
-                                                                                         match (transform_constraint (Prod (p1), Sum ([(Prod (p2)); (Num (-1))]))) with 
+                                                                                         match (transform_constraint_p (Prod (p1), Sum ([(Prod (p2)); (Num (-1))]))) with 
                                                                                             | (Num (n), sums) -> (
                                                                                                                   match (op_to_simplex_format sums varlist varcount) with
                                                                                                                     | (p_lp, newlist, newcount) -> 
