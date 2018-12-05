@@ -3,8 +3,8 @@ open Lexer
 open Lexing
 
 let run_solver_indexed value = 
-    let (f, cs, i_map, inv_map) = (Tseitin.tseitin_transformation_inc_i value) in
-        Solver.sat_inc_i (f, cs, i_map, inv_map);;
+    let (f, cs, i_map, inv_map, vsids) = (Tseitin.tseitin_transformation_inc_i value) in
+        Solver.sat_inc_i (f, cs, i_map, inv_map, vsids);;
     
 let run_solver_incremental value = 
     let (f, cs, i_map, inv_map) = (Tseitin.tseitin_transformation_inc value) in

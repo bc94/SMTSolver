@@ -217,28 +217,40 @@ let tseitin_transformation_inc f = tseitin_transformation_inc_n f 0 0;;
 (* Tseitin transformation using index representation of clauses *)
 (****************************************************************)
 
-let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last =
+let rec update_vsids_rec vsids l result =
+        match vsids with 
+         | [] -> result @ [(l, 1.0)]
+         | (lit, v) :: vs -> (
+                              match compare l lit with
+                                | 0 -> result @ [(lit, v +. 1.0)] @ vs
+                                | _ -> update_vsids_rec vs l (result @ [(lit, v)])
+                             );;
+
+let update_vsids vsids l = update_vsids_rec vsids l [];;
+
+let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
     match e with
         | Not (x) -> (
-                      match (transform_elem_inc_i x cs i_map inv_map i (n_last + 1) (n_last + 1)) with 
-                        | (xs, n, cs_new, i_map_new, inv_map_new, i_new) -> ([Disjunction ([(Atom (AuxVar n_aux)); (Atom (AuxVar (n_last + 1)))])] @ 
+                      match (transform_elem_inc_i x cs i_map inv_map i (n_last + 1) (n_last + 1) vsids) with 
+                        | (xs, n, cs_new, i_map_new, inv_map_new, i_new, vsids_new) -> ([Disjunction ([(Atom (AuxVar n_aux)); (Atom (AuxVar (n_last + 1)))])] @ 
                                                                 [Disjunction ([Not (Atom (AuxVar n_aux)); Not (Atom (AuxVar (n_last + 1)))])] @
                                                                 xs,
                                                                 n,
                                                                 cs_new,
                                                                 i_map_new,
                                                                 inv_map_new,
-                                                                i_new)
+                                                                i_new,
+                                                                update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1))))
                         | _ -> failwith "[Invalid formula]: transform_elem"
                      )                  
-        | Conjunction ([]) -> ([], n_last, cs, i_map, inv_map, i)
+        | Conjunction ([]) -> ([], n_last, cs, i_map, inv_map, i, vsids)
         | Conjunction (xs) -> (
                                match (length xs) with
                                 | 2 -> (
-                                        match (transform_elem_inc_i (hd (remove_last xs)) cs i_map inv_map i (n_last + 1) (n_last + 2)) with
-                                            | (ys, n1, cs_n, i_map_n, inv_map_n, i_n) -> (
-                                                              match (transform_elem_inc_i (hd (rev xs)) cs_n i_map_n inv_map_n i_n (n_last + 2) (n1)) with 
-                                                                | (zs, n2, cs_new, i_map_new, inv_map_new, i_new) -> 
+                                        match (transform_elem_inc_i (hd (remove_last xs)) cs i_map inv_map i (n_last + 1) (n_last + 2) vsids) with
+                                            | (ys, n1, cs_n, i_map_n, inv_map_n, i_n, vsids_n) -> (
+                                                              match (transform_elem_inc_i (hd (rev xs)) cs_n i_map_n inv_map_n i_n (n_last + 2) (n1) vsids_n) with 
+                                                                | (zs, n2, cs_new, i_map_new, inv_map_new, i_new, vsids_new) -> 
                                                                         ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1))])] @ 
                                                                          [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 2))])] @ 
                                                                          [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1))); Not (Atom (AuxVar (n_last + 2)))])] @ 
@@ -248,16 +260,17 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last =
                                                                          cs_new,
                                                                          i_map_new,
                                                                          inv_map_new,
-                                                                         i_new)
+                                                                         i_new,
+                                                                         update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))
                                                              )
                                         )
-                                | 1 -> (transform_elem_inc_i (hd xs) cs i_map inv_map i n_aux n_last)
+                                | 1 -> (transform_elem_inc_i (hd xs) cs i_map inv_map i n_aux n_last vsids)
                                 | _ -> (
-                                        match (transform_elem_inc_i (Conjunction (remove_last xs)) cs i_map inv_map i (n_last + 1) (n_last + 2)) with
-                                            | (ys, n1, cs_n, i_map_n, inv_map_n, i_n) -> 
+                                        match (transform_elem_inc_i (Conjunction (remove_last xs)) cs i_map inv_map i (n_last + 1) (n_last + 2) vsids) with
+                                            | (ys, n1, cs_n, i_map_n, inv_map_n, i_n, vsids_n) -> 
                                                         (
-                                                         match (transform_elem_inc_i (hd (rev xs)) cs_n i_map_n inv_map_n i_n (n_last + 2) (n1)) with 
-                                                            | (zs, n2, cs_new, i_map_new, inv_map_new, i_new) -> 
+                                                         match (transform_elem_inc_i (hd (rev xs)) cs_n i_map_n inv_map_n i_n (n_last + 2) (n1) vsids_n) with 
+                                                            | (zs, n2, cs_new, i_map_new, inv_map_new, i_new, vsids_new) -> 
                                                                 ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1))])] @ 
                                                                  [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 2))])] @ 
                                                                  [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1))); Not (Atom (AuxVar (n_last + 2)))])] @ 
@@ -267,18 +280,19 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last =
                                                                  cs_new,
                                                                  i_map_new,
                                                                  inv_map_new,
-                                                                 i_new)
+                                                                 i_new,
+                                                                 update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))
                                                         )
                                        )
                               )
-        | Disjunction ([]) -> ([], n_last, cs, i_map, inv_map, i)      
+        | Disjunction ([]) -> ([], n_last, cs, i_map, inv_map, i, vsids)      
         | Disjunction (xs) -> (
                                match (length xs) with 
                                 | 2 -> (
-                                        match (transform_elem_inc_i (hd (remove_last xs)) cs i_map inv_map i (n_last + 1) (n_last + 2)) with
-                                            | (ys, n1, cs_n, i_map_n, inv_map_n, i_n) -> (
-                                                           match (transform_elem_inc_i (hd (rev xs)) cs_n i_map_n inv_map_n i_n (n_last + 2) (n1)) with 
-                                                            | (zs, n2, cs_new, i_map_new, inv_map_new, i_new) -> 
+                                        match (transform_elem_inc_i (hd (remove_last xs)) cs i_map inv_map i (n_last + 1) (n_last + 2) vsids) with
+                                            | (ys, n1, cs_n, i_map_n, inv_map_n, i_n, vsids_n) -> (
+                                                           match (transform_elem_inc_i (hd (rev xs)) cs_n i_map_n inv_map_n i_n (n_last + 2) (n1) vsids_n) with 
+                                                            | (zs, n2, cs_new, i_map_new, inv_map_new, i_new, vsids_new) -> 
                                                                 ([Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1)))])] @ 
                                                                  [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 2)))])] @ 
                                                                  [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1)); Atom (AuxVar (n_last + 2))])] @ 
@@ -288,15 +302,16 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last =
                                                                  cs_new,
                                                                  i_map_new,
                                                                  inv_map_new,
-                                                                 i_new)
+                                                                 i_new,
+                                                                 update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))
                                                           )
                                        )
-                                | 1 -> (transform_elem_inc_i (hd xs) cs i_map inv_map i n_aux n_last)
+                                | 1 -> (transform_elem_inc_i (hd xs) cs i_map inv_map i n_aux n_last vsids)
                                 | _ -> (
-                                        match (transform_elem_inc_i (Disjunction (remove_last xs)) cs i_map inv_map i (n_last + 1) (n_last + 2)) with
-                                            | (ys, n1, cs_n, i_map_n, inv_map_n, i_n) -> (
-                                                        match (transform_elem_inc_i (hd (rev xs)) cs_n i_map_n inv_map_n i_n (n_last + 2) (n1)) with 
-                                                            | (zs, n2, cs_new, i_map_new, inv_map_new, i_new) -> 
+                                        match (transform_elem_inc_i (Disjunction (remove_last xs)) cs i_map inv_map i (n_last + 1) (n_last + 2) vsids) with
+                                            | (ys, n1, cs_n, i_map_n, inv_map_n, i_n, vsids_n) -> (
+                                                        match (transform_elem_inc_i (hd (rev xs)) cs_n i_map_n inv_map_n i_n (n_last + 2) (n1) vsids_n) with 
+                                                            | (zs, n2, cs_new, i_map_new, inv_map_new, i_new, vsids_new) -> 
                                                                 ([Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 1)))])] @ 
                                                                  [Disjunction ([Atom (AuxVar n_aux); Not (Atom (AuxVar (n_last + 2)))])] @ 
                                                                  [Disjunction ([Not (Atom (AuxVar n_aux)); Atom (AuxVar (n_last + 1)); Atom (AuxVar (n_last + 2))])] @ 
@@ -306,7 +321,8 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last =
                                                                  cs_new,
                                                                  i_map_new,
                                                                  inv_map_new,
-                                                                 i_new)
+                                                                 i_new,
+                                                                 update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))
                                                         )
                                        )
                               )
@@ -320,7 +336,8 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last =
                                 cs,
                                 i_map,
                                 inv_map,
-                                i)
+                                i,
+                                update_vsids vsids (Atom (Index ind)))
                              )
                         else ( 
                               ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (Index i)])] @ 
@@ -329,15 +346,16 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last =
                                (cs @ [(x, true, false, 0)] @ [(x, false, false, 0)]),
                                (Index_Map.add ("-" ^ Printing.print_constraint_n x) (i + 1) (Index_Map.add (Printing.print_constraint_n x) i (i_map))),
                                (Inv_Map.add (i + 1) (x, false, false, 0) (Inv_Map.add i (x, true, false, 0) inv_map)),
-                               i + 2)
+                               i + 2,
+                               update_vsids vsids (Atom (Index i)))
                              )
         | _ -> failwith "[Invalid argument]: transform_elem_inc";;
 
 let tseitin_transformation_inc_n_i f n_aux n_last = 
     match f with
         | Formula (x) -> (
-                          match (transform_elem_inc_i x [] Index_Map.empty Inv_Map.empty 0 n_aux n_last) with
-                            | (xs, n, cs, i_map, inv_map, i) -> (Formula (Conjunction ([Atom (AuxVar n_aux)] @ xs)), Assignment (cs), i_map, inv_map)
+                          match (transform_elem_inc_i x [] Index_Map.empty Inv_Map.empty 1 n_aux n_last []) with
+                            | (xs, n, cs, i_map, inv_map, i, vsids) -> (Formula (Conjunction ([Atom (AuxVar n_aux)] @ xs)), Assignment (cs), i_map, inv_map, vsids)
                             | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n" 
                          )
         | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n";;

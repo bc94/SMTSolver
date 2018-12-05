@@ -46,6 +46,7 @@ formula:
     | OPEN_VALIDITY; e = elem; CLOSE_VALIDITY   { Formula (Not e) }
     ;
 
+
 elem:
     | OPEN_CONJUNCTION; el = elem_list; CLOSE_CONJUNCTION  { Conjunction el }
     | OPEN_DISJUNCTION; el = elem_list; CLOSE_DISJUNCTION  { Disjunction el }
@@ -53,6 +54,7 @@ elem:
     | TRUE  { Atom (Constraint (LessEq ((Num 0), (Num 1)))) }
     | FALSE { Atom (Constraint (LessEq ((Num 1), (Num 0)))) }
     | l = literal   { l }
+    ;
 
 elem_list:
     | e = elem; el = elem_list   { e :: el }
