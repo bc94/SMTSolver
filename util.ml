@@ -13,6 +13,12 @@ let time f x =
     in
        res;;
 
+let add_if_is_mem xs x = if (List.mem x xs)
+                         then xs 
+                         else (xs @ [x]);;
+
+let remove_duplicates xs = List.fold_left add_if_is_mem [] xs;;
+
 let rec is_in_varlist varlist var = 
     match varlist with
         | [] -> -1
