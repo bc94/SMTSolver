@@ -50,6 +50,8 @@ let negate_prod prod =
     match prod with 
         | Prod ([Var (x); Num (n)]) -> Prod ([Var (x); Num (-1 * n)])
         | Prod ([Num (n); Var (x)]) -> Prod ([Num (-1 * n); Var (x)])
+        | Prod ([Var (x); Div (Num (n1), Num (n2))]) -> Prod ([Var (x); Div (Num (-1 * n1), Num (n2))]) 
+        | Prod ([Div (Num (n1), Num (n2)); Var (x)]) ->  Prod ([Div (Num (-1 * n1), Num (n2)); Var (x)])
         | _ -> failwith "[Invalid argument] negate_prod: argument not a product between var and num";;
 
 let rec extract_nums_rec s sums ns = 
@@ -134,6 +136,8 @@ let rec transform_constraint cons =
                                                          match p with 
                                                             | [Var (x); Num (n)] -> (Sum (ss @ [Prod ([Var (x); Num (-1 * n)])]), Num (List.fold_left (-) 0 ns))
                                                             | [Num (n); Var (x)] -> (Sum (ss @ [Prod ([Num (-1 * n); Var (x)])]), Num (List.fold_left (-) 0 ns))
+                                                            | [Var (x); Div (Num (n1), Num (n2))] -> (Sum (ss @ [Prod ([Var (x); Div (Num (-1 * n1), Num (n2))])]), Num (List.fold_left (-) 0 ns))
+                                                            | [Div (Num (n1), Num (n2)); Var (x)] -> (Sum (ss @ [Prod ([Div (Num (-1 * n1), Num (n2)); Var (x)])]), Num (List.fold_left (-) 0 ns))
                                                             | _ -> failwith "[Invalid argument] transform_constraint"
                                                         )
                                  )
@@ -143,6 +147,8 @@ let rec transform_constraint cons =
                                                          match p with 
                                                             | [Var (x); Num (n)] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Var (x); Num (-1 * n)])]))
                                                             | [Num (n); Var (x)] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Num (-1 * n); Var (x)])]))
+                                                            | [Var (x); Div (Num (n1), Num (n2))] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Var (x); Div (Num (-1 * n1), Num (n2))])]))
+                                                            | [Div (Num (n1), Num (n2)); Var (x)] -> (Num (List.fold_left (-) 0 ns), Sum (ss @ [Prod ([Div (Num (-1 * n1), Num (n2)); Var (x)])]))
                                                             | _ -> failwith "[Invalid argument] transform_constraint"
                                                         )
                                  )
@@ -497,6 +503,11 @@ let rec op_to_simplex_format_inc operator varlist varcount =
                         | m -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), varlist, varcount) 
                      )
         | Num (n) -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))), varlist, varcount)
+        | Div (d1, d2) -> (
+                           match (d1, d2) with 
+                                | (Num (n1), Num (n2)) -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n1) (big_int_of_int n2)) (Simplex_inc.nat_of_integer (big_int_of_int 0))), varlist, varcount)
+                                | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: divison of non-num_type"
+                          )
         | Sum (s) -> (
                       match s with
                        | [x] -> op_to_simplex_format_inc x varlist varcount
@@ -519,6 +530,24 @@ let rec op_to_simplex_format_inc operator varlist varcount =
                                         | -1 -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), (varlist @ [(x, varcount + 1)]), (varcount + 1))
                                         | m -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), varlist, varcount) 
                                        )       
+        | Prod ([Var (x); Div (d1, d2)]) -> (
+                                            match (d1, d2) with
+                                                | (Num (n1), Num (n2)) -> (
+                                                                            match (is_in_varlist varlist x) with 
+                                                                            | -1 -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n1) (big_int_of_int n2)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), (varlist @ [(x, varcount + 1)]), (varcount + 1))
+                                                                            | m -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n1) (big_int_of_int n2)) (Simplex_inc.nat_of_integer (big_int_of_int m))), varlist, varcount) 
+                                                                        ) 
+                                                | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: division of non-num_type"
+                                            )
+        | Prod ([Div (d1, d2); Var (x)]) -> (
+                                            match (d1, d2) with
+                                                | (Num (n1), Num (n2)) -> (
+                                                                            match (is_in_varlist varlist x) with 
+                                                                            | -1 -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n1) (big_int_of_int n2)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), (varlist @ [(x, varcount + 1)]), (varcount + 1))
+                                                                            | m -> ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int n1) (big_int_of_int n2)) (Simplex_inc.nat_of_integer (big_int_of_int m))), varlist, varcount) 
+                                                                        ) 
+                                                | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: division of non-num_type"
+                                            )
         | Prod ([Var (_); Var (_)]) -> failwith "[Invalid argument] op_to_simplex_format_inc: constraint not linear"
         | Prod ([p1; p2]) -> let (x, n) = prod_to_simplex_format_inc operator in
                                 (
@@ -755,6 +784,177 @@ let rec to_simplex_format_inc assignment varlist varcount result cs i_map =
                                                                                                                )
                                                                                                 )
                                                                         )   
+                                                        | (Div (d1, d2), Var (x)) -> (
+                                                                                   match (d1, d2) with 
+                                                                                    | (Num (n1), Num (n2)) -> (
+                                                                                                               match ((is_in_varlist varlist x), v) with
+                                                                                                                | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                        (Simplex_inc.rat_of_int_pair (big_int_of_int (n1)) (big_int_of_int n2))))])
+                                                                                                                                                                                (cs @ [(c, v, d, dl)]) 
+                                                                                                                                                                                i_map
+                                                                                                                | (-1, false) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))),
+                                                                                                                                                                                                            (Simplex_inc.rat_of_int_pair (big_int_of_int (n1 - n2)) (big_int_of_int n2))))])
+                                                                                                                                                                                    (cs @ [(c, v, d, dl)])
+                                                                                                                                                                                    i_map
+                                                                                                                | (m, true) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                        (Simplex_inc.rat_of_int_pair (big_int_of_int (n1)) (big_int_of_int n2))))])
+                                                                                                                                                    (cs @ [(c, v, d, dl)])
+                                                                                                                                                    i_map
+                                                                                                                | (m, false) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                            (Simplex_inc.rat_of_int_pair (big_int_of_int (n1 - n2)) (big_int_of_int n2))))])
+                                                                                                                                                    (cs @ [(c, v, d, dl)])
+                                                                                                                                                    i_map
+                                                                                                              )
+                                                                                    | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: Division contains non-num_type"
+                                                                                  )
+                                                        | (Var (x), Div (d1, d2)) -> (
+                                                                                   match (d1, d2) with 
+                                                                                    | (Num (n1), Num (n2)) -> (
+                                                                                                                match ((is_in_varlist varlist x), v) with
+                                                                                                                | (-1, true) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                                                        (Simplex_inc.rat_of_int_pair (big_int_of_int n1) (big_int_of_int n2))))]) 
+                                                                                                                                                                                                                (cs @ [(c, v, d, dl)])
+                                                                                                                                                                                                                i_map                        
+                                                                                                                | (-1, false) -> to_simplex_format_inc (Assignment (xs)) (varlist @ [(x, varcount + 1)]) (varcount + 1) (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int (varcount + 1)))), 
+                                                                                                                                                                                                                                        (Simplex_inc.rat_of_int_pair (big_int_of_int (n1 + n2)) (big_int_of_int n2))))])
+                                                                                                                                                                                                                (cs @ [(c, v, d, dl)])    
+                                                                                                                                                                                                                i_map              
+                                                                                                                | (m, true) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                                                            (Simplex_inc.rat_of_int_pair (big_int_of_int n1) (big_int_of_int n2))))])
+                                                                                                                                                                                    (cs @ [(c, v, d, dl)])       
+                                                                                                                                                                                    i_map
+                                                                                                                | (m, false) -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ ((Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int m))), 
+                                                                                                                                                                                                            (Simplex_inc.rat_of_int_pair (big_int_of_int (n1 + n2)) (big_int_of_int n2))))])
+                                                                                                                                                                                    (cs @ [(c, v, d, dl)])  
+                                                                                                                                                                                    i_map
+                                                                                                              )
+                                                                                    | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: Division contains non-num_type"
+                                                                                  )
+                                                        | (Div (d1, d2), Num (n)) -> (
+                                                                                   match (d1, d2) with 
+                                                                                    | (Num (n1), Num (n2)) -> (
+                                                                                                                match (compare ((float_of_int n1) /. (float_of_int n2)) (float_of_int n)) with
+                                                                                                                    | 1 -> (
+                                                                                                                            match v with   
+                                                                                                                            | true -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GTPP (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0)), 
+                                                                                                                                                                                                                    Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))))]) 
+                                                                                                                                                                                        (cs @ [(c, v, d, dl)])
+                                                                                                                                                                                        i_map
+                                                                                                                            | false -> to_simplex_format_inc (Assignment (xs)) varlist varcount result (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                           )
+                                                                                                                    | _ -> (
+                                                                                                                            match v with 
+                                                                                                                            | true -> to_simplex_format_inc (Assignment (xs)) varlist varcount result (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                            | false -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GTPP (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0)), 
+                                                                                                                                                                                                                    Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))))])
+                                                                                                                                                                                            (cs @ [(c, v, d, dl)])      
+                                                                                                                                                                                            i_map
+                                                                                                                           )
+                                                                                                              )
+                                                                                    | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: Division contains non-num_type"
+                                                                                  )
+                                                        | (Num (n), Div (d1, d2)) -> (
+                                                                                   match (d1, d2) with 
+                                                                                    | (Num (n1), Num (n2)) -> (
+                                                                                                                match (compare (float_of_int n) ((float_of_int n1) /. (float_of_int n2))) with
+                                                                                                                    | 1 -> (
+                                                                                                                            match v with   
+                                                                                                                            | true -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GTPP (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0)), 
+                                                                                                                                                                                                                    Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))))]) 
+                                                                                                                                                                                        (cs @ [(c, v, d, dl)])
+                                                                                                                                                                                        i_map
+                                                                                                                            | false -> to_simplex_format_inc (Assignment (xs)) varlist varcount result (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                           )
+                                                                                                                    | _ -> (
+                                                                                                                            match v with 
+                                                                                                                            | true -> to_simplex_format_inc (Assignment (xs)) varlist varcount result (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                            | false -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GTPP (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0)), 
+                                                                                                                                                                                                                    Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))))])
+                                                                                                                                                                                            (cs @ [(c, v, d, dl)])      
+                                                                                                                                                                                            i_map
+                                                                                                                           )
+                                                                                                              )
+                                                                                    | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: Division contains non-num_type"
+                                                                                  )
+                                                        | (Sum (s), Div (d1, d2)) -> (
+                                                                                   match (d1, d2) with 
+                                                                                    | (Num (n1), Num (n2)) -> ( 
+                                                                                                               match (transform_constraint (Sum (s), Num (0))) with 
+                                                                                                                | (sums, Num (m)) -> (
+                                                                                                                                      match (op_to_simplex_format_inc sums varlist varcount) with
+                                                                                                                                        | (s_lp, newlist, newcount) -> 
+                                                                                                                                                    (
+                                                                                                                                                        match v with 
+                                                                                                                                                        | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n1 + (m * n2))) (big_int_of_int n2))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                                                        | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n1 + n2 + (m * n2))) (big_int_of_int n2))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                                                    )
+                                                                                                                                     )
+                                                                                                              )
+                                                                                    | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: Division contains non-num_type"
+                                                                                  )
+                                                        | (Div (d1, d2), Sum (s)) -> (
+                                                                                   match (d1, d2) with 
+                                                                                    | (Num (n1), Num (n2)) -> ( 
+                                                                                                                match (transform_constraint (Num (0), Sum (s))) with 
+                                                                                                                    | (Num (m), sums) -> (
+                                                                                                                                    match (op_to_simplex_format_inc sums varlist varcount) with
+                                                                                                                                    | (s_lp, newlist, newcount) -> 
+                                                                                                                                                    (
+                                                                                                                                                        match v with 
+                                                                                                                                                        | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n1 + (m * n2))) (big_int_of_int n2))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                                                        | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (s_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int ((n1 - n2) + (m * n2))) (big_int_of_int n2))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                                                    )
+                                                                                                                                        )
+                                                                                                              )
+                                                                                    | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: Division contains non-num_type"
+                                                                                  )
+                                                        | (Prod (p), Div (d1, d2)) -> (
+                                                                                    match (d1, d2) with 
+                                                                                        | (Num (n1), Num (n2)) -> (
+                                                                                                                    match (op_to_simplex_format_inc (Prod (p)) varlist varcount) with
+                                                                                                                        | (p_lp, newlist, newcount) -> (
+                                                                                                                                                        match v with 
+                                                                                                                                                        | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int n1) (big_int_of_int n2))))]) (cs @ [(c, v, d, dl)]) i_map  
+                                                                                                                                                        | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n1 + n2)) (big_int_of_int n2))))]) (cs @ [(c, v, d, dl)]) i_map            
+                                                                                                                                                    )        
+                                                                                                                  )
+                                                                                        | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: Division contains non-num_type"
+                                                                                   )
+                                                        | (Div (d1, d2), Prod (p)) -> (
+                                                                                    match (d1, d2) with 
+                                                                                        | (Num (n1), Num (n2)) -> (
+                                                                                                                    match (op_to_simplex_format_inc (Prod (p)) varlist varcount) with
+                                                                                                                        | (p_lp, newlist, newcount) -> (
+                                                                                                                                                        match v with 
+                                                                                                                                                        | true -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n1)) (big_int_of_int n2))))]) (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                                                        | false -> to_simplex_format_inc (Assignment (xs)) newlist newcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.LEQ (p_lp, (Simplex_inc.rat_of_int_pair (big_int_of_int (n1 - n2)) (big_int_of_int n2))))]) (cs @ [(c, v, d, dl)]) i_map  
+                                                                                                                                                    )  
+                                                                                                                  )
+                                                                                        | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: Division contains non-num_type"
+                                                                                   )
+                                                        | (Div (d11, d12), Div (d21, d22)) -> (
+                                                                                   match ((d11, d12), (d21, d22)) with 
+                                                                                    | ((Num (n1d1), Num (n2d1)), (Num (n1d2), Num (n2d2))) -> (
+                                                                                                    match (compare ((float_of_int n1d1) /. (float_of_int n2d1)) ((float_of_int n1d2) /. (float_of_int n2d2))) with
+                                                                                                        | 1 -> (
+                                                                                                                match v with   
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find (Printing.print_constraint_n c) i_map)), Simplex_inc.GTPP (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0)), 
+                                                                                                                                                                                                        Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))))]) 
+                                                                                                                                                                            (cs @ [(c, v, d, dl)])
+                                                                                                                                                                            i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) varlist varcount result (cs @ [(c, v, d, dl)]) i_map
+                                                                                                            )
+                                                                                                        | _ -> (
+                                                                                                                match v with 
+                                                                                                                | true -> to_simplex_format_inc (Assignment (xs)) varlist varcount result (cs @ [(c, v, d, dl)]) i_map
+                                                                                                                | false -> to_simplex_format_inc (Assignment (xs)) varlist varcount (result @ [(Simplex_inc.nat_of_integer (big_int_of_int (Tseitin.Index_Map.find ("-" ^ Printing.print_constraint_n c) i_map)), Simplex_inc.GTPP (Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0)), 
+                                                                                                                                                                                                        Simplex_inc.lp_monom (Simplex_inc.rat_of_int_pair (big_int_of_int 1) (big_int_of_int 1)) (Simplex_inc.nat_of_integer (big_int_of_int 0))))])
+                                                                                                                                                                                (cs @ [(c, v, d, dl)])      
+                                                                                                                                                                                i_map
+                                                                                                            )
+                                                                                                                                              )
+                                                                                    | _ -> failwith "[Invalid argument] op_to_simplex_format_inc: Division contains non-num_type"
+                                                                                  )
                                                         | (Sum (s1), Sum (s2)) ->
                                                                         ( 
                                                                          match (transform_constraint (Sum (s1), Sum (s2))) with 

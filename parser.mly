@@ -30,6 +30,21 @@ open Types
 %token CLOSE_NUM
 %token OPEN_VAR
 %token CLOSE_VAR
+%token OPEN_PAR
+%token CLOSE_PAR
+%token ASSERT
+%token AND 
+%token OR 
+%token NOT
+%token EQ
+%token LT
+%token GT
+%token LEQ
+%token GEQ
+%token PLUS
+%token MINUS
+%token TIMES
+%token DIVIDED
 %token <int> NUM 
 %token <string> VAR
 %token EOF
@@ -44,8 +59,56 @@ prog:
 
 formula:
     | OPEN_VALIDITY; e = elem; CLOSE_VALIDITY   { Formula (Not e) }
+    | OPEN_PAR; ASSERT; e = elem_smt2; CLOSE_PAR    { Formula e }
     ;
 
+elem_smt2:
+    | OPEN_PAR; AND; el = elem_list_smt2; CLOSE_PAR  { Conjunction el }
+    | OPEN_PAR; OR; el = elem_list_smt2; CLOSE_PAR   { Disjunction el }
+    | OPEN_PAR; NOT; e = elem_smt2; CLOSE_PAR    { Not e }
+    | OPEN_PAR; l = literal_smt2; CLOSE_PAR  { l }
+    ;
+
+elem_list_smt2:
+    | e = elem_smt2; el = elem_list_smt2    { e :: el }
+    | (* empty *)   { [] }
+    ;
+
+literal_smt2:
+    | EQ; n1 = num_smt2; n2 = num_smt2  { Conjunction ([(Atom (Constraint (LessEq (n1, n2))))] @ [(Atom (Constraint (LessEq (n2, n1))))]) }
+    | LT; n1 = num_smt2; n2 = num_l_smt2  { Atom (Constraint (LessEq (n1, n2))) }
+    | GT; n1 = num_l_smt2; n2 = num_smt2  { Atom (Constraint (LessEq (n2, n1))) }
+    | LEQ; n1 = num_smt2; n2 = num_smt2 { Atom (Constraint (LessEq (n1, n2))) }
+    | GEQ; n1 = num_smt2; n2 = num_smt2 { Atom (Constraint (LessEq (n2, n1))) }
+    ;
+
+num_smt2:
+    | OPEN_PAR; PLUS; n1 = num_smt2; n2 = num_smt2; CLOSE_PAR   { Sum ([n1; n2]) } 
+    | OPEN_PAR; MINUS; n1 = num_smt2; n2 = num_smt2; CLOSE_PAR  { Sum ([n1; (Prod ([(Num (-1)); n2]))]) }
+    | OPEN_PAR; TIMES; n1 = num_smt2; n2 = num_smt2; CLOSE_PAR  { Prod ([n1; n2]) }
+    | OPEN_PAR; DIVIDED; n1 = number_smt2; n2 = number_smt2; CLOSE_PAR    { Div (n1, n2) }
+    | v = var_smt2  { v }
+    ;
+
+num_l_smt2:
+    | OPEN_PAR; PLUS; n1 = num_smt2; n2 = num_smt2; CLOSE_PAR   { Sum ([n1; n2; (Num (-1))]) } 
+    | OPEN_PAR; MINUS; n1 = num_smt2; n2 = num_smt2; CLOSE_PAR  { Sum ([n1; (Prod ([(Num (-1)); n2])); (Num (-1))]) }
+    | OPEN_PAR; TIMES; n1 = num_smt2; n2 = num_smt2; CLOSE_PAR  { Sum ([(Prod ([n1; n2])); (Num (-1))]) }
+    | OPEN_PAR; DIVIDED; n1 = NUM; n2 = NUM; CLOSE_PAR    { Div (Num (n1 - n2), Num (n2)) }
+    | OPEN_PAR; DIVIDED; OPEN_PAR; MINUS; n1 = NUM; CLOSE_PAR; n2 = NUM CLOSE_PAR    { Div (Num ((-1) * (n1 - n2)), Num (n2)) }
+    | v = var_smt2  { v }
+    ;
+
+number_smt2:
+    | OPEN_PAR; MINUS; n = NUM; CLOSE_PAR   { Num ((-1) * n) }
+    | n = NUM  { Num (n) }
+    ;
+
+var_smt2:
+    | OPEN_PAR; MINUS; n = NUM; CLOSE_PAR   { Num ((-1) * n) }
+    | n = NUM  { Num (n) }
+    | v = VAR  { Var (v) }
+    ;
 
 elem:
     | OPEN_CONJUNCTION; el = elem_list; CLOSE_CONJUNCTION  { Conjunction el }

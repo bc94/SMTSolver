@@ -240,7 +240,8 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                                                 i_map_new,
                                                                 inv_map_new,
                                                                 i_new,
-                                                                update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1))))
+                                                                vsids)
+                                                                (*update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1))))*)
                         | _ -> failwith "[Invalid formula]: transform_elem"
                      )                  
         | Conjunction ([]) -> ([], n_last, cs, i_map, inv_map, i, vsids)
@@ -261,7 +262,8 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                                                          i_map_new,
                                                                          inv_map_new,
                                                                          i_new,
-                                                                         update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))
+                                                                         vsids)
+                                                                         (*update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))*)
                                                              )
                                         )
                                 | 1 -> (transform_elem_inc_i (hd xs) cs i_map inv_map i n_aux n_last vsids)
@@ -281,7 +283,8 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                                                  i_map_new,
                                                                  inv_map_new,
                                                                  i_new,
-                                                                 update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))
+                                                                 vsids)
+                                                                 (*update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))*)
                                                         )
                                        )
                               )
@@ -303,7 +306,8 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                                                  i_map_new,
                                                                  inv_map_new,
                                                                  i_new,
-                                                                 update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))
+                                                                 vsids)
+                                                                 (*update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))*)
                                                           )
                                        )
                                 | 1 -> (transform_elem_inc_i (hd xs) cs i_map inv_map i n_aux n_last vsids)
@@ -322,7 +326,8 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                                                  i_map_new,
                                                                  inv_map_new,
                                                                  i_new,
-                                                                 update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))
+                                                                 vsids)
+                                                                 (*update_vsids (update_vsids (update_vsids vsids_new (Atom (AuxVar n_aux))) (Atom (AuxVar (n_last + 1)))) (Atom (AuxVar (n_last + 2))))*)
                                                         )
                                        )
                               )
@@ -337,7 +342,8 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                 i_map,
                                 inv_map,
                                 i,
-                                update_vsids vsids (Atom (Index ind)))
+                                vsids)
+                                (*update_vsids vsids (Atom (Index ind)))*)
                              )
                         else ( 
                               ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (Index i)])] @ 
@@ -347,7 +353,8 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                (Index_Map.add ("-" ^ Printing.print_constraint_n x) (i + 1) (Index_Map.add (Printing.print_constraint_n x) i (i_map))),
                                (Inv_Map.add (i + 1) (x, false, false, 0) (Inv_Map.add i (x, true, false, 0) inv_map)),
                                i + 2,
-                               update_vsids vsids (Atom (Index i)))
+                               vsids)
+                               (*update_vsids vsids (Atom (Index i)))*)
                              )
         | _ -> failwith "[Invalid argument]: transform_elem_inc";;
 

@@ -4,6 +4,7 @@
 
 type num_type = Sum of num_type list
               | Prod of num_type list
+              | Div of num_type * num_type
               | Num of int
               | Var of string;;
 

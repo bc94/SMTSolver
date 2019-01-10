@@ -24,6 +24,21 @@ type token = OPEN_VALIDITY
            | CLOSE_NUM
            | OPEN_VAR
            | CLOSE_VAR
+           | OPEN_PAR
+           | CLOSE_PAR
+           | ASSERT
+           | AND
+           | OR
+           | NOT
+           | EQ
+           | LT
+           | GT
+           | LEQ
+           | GEQ
+           | PLUS
+           | MINUS
+           | TIMES
+           | DIVIDED
            | NUM 
            | VAR
            | EOF;;

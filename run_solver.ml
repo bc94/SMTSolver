@@ -24,12 +24,13 @@ let parse_with_error lexbuf =
         | SyntaxError msg -> 
           fprintf stderr "%a: %s\n" print_pos lexbuf msg;
           None
-        | Parser.Error ->
+        | Parser.Error -> 
+          (*printf "%s\n" (Lexing.lexeme lexbuf);*)
           fprintf stderr "%a: syntax error\n" print_pos lexbuf;
           exit (-1)
 
 let rec parse lexbuf option = 
-    match parse_with_error lexbuf with
+   match parse_with_error lexbuf with
         | Some value -> (
                          match option with
                             | "indexed" -> Util.time run_solver_indexed value 

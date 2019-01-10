@@ -18,6 +18,11 @@ let num = '-'? ['0'-'9'] ['0'-'9']*
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let par = "(set-info" [^'\n']* ")" | "(set-logic" [^'\n']* ")" | "(declare-fun" [^'\n']* ")" | "(check" [^'\n']* ")" | "(exit)"
+let assert = [' ' '\t']* "assert" [' ' '\t']*
+let and_t = [' ' '\t']* "and" [' ' '\t']*
+let or_t = [' ' '\t']* "or" [' ' '\t']*
+let not_t = [' ' '\t']* "not" [' ' '\t']*
 
 rule read =
     parse
@@ -25,6 +30,7 @@ rule read =
     | newline           { next_line lexbuf; read lexbuf }
     | num               { NUM (int_of_string (Lexing.lexeme lexbuf)) }
     | id                { VAR (Lexing.lexeme lexbuf) }
+    | par               { read lexbuf }
     | "<validity>"      { OPEN_VALIDITY }
     | "</validity>"     { CLOSE_VALIDITY }
     | "<disjunction>"   { OPEN_DISJUNCTION }
@@ -51,5 +57,20 @@ rule read =
     | "</number>"       { CLOSE_NUM }
     | "<variable>"      { OPEN_VAR}
     | "</variable>"     { CLOSE_VAR }
+    | "("               { OPEN_PAR }
+    | ")"               { CLOSE_PAR }
+    | assert            { ASSERT }
+    | and_t             { AND }
+    | or_t              { OR }
+    | not_t             { NOT }
+    | "="               { EQ }
+    | "<"               { LT }
+    | ">"               { GT }
+    | "<="              { LEQ }
+    | ">="              { GEQ }
+    | "+"               { PLUS }
+    | "-"               { MINUS }
+    | "*"               { TIMES }
+    | "/"               { DIVIDED }
     | _                 { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
     | eof               { EOF }
