@@ -17,8 +17,8 @@ and print_num_type n =
         | Sum (xs) -> "Sum ([" ^ (print_num_type_list xs) ^ "])" 
         | Prod (xs) -> "Prod ([" ^ (print_num_type_list xs) ^ "])"
         | Div (x, y) -> "Div (" ^ (print_num_type x) ^ ", " ^ (print_num_type y) ^ ")"
-        | Num (x) -> "Num " ^ (string_of_int x)
-        | Var (x) -> "Var " ^ x
+        | Num (x) -> "Num (" ^ (string_of_int x) ^ ")"
+        | Var (x) -> "Var (" ^ x ^ ")"
         | _ -> failwith "[Invalid formula]: print_num_type"
 
 let print_less_equal le =

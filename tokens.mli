@@ -30,6 +30,7 @@ type token = OPEN_VALIDITY
            | AND
            | OR
            | NOT
+           | LET
            | EQ
            | LT
            | GT

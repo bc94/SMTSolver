@@ -13,7 +13,8 @@ type less_equal = LessEq of num_type * num_type
 
 type constraint_n = Constraint of less_equal
                   | Index of int
-                  | AuxVar of int;;
+                  | AuxVar of int
+                  | RVar of string;;
 
 (**************************)
 (* Boolean operators etc. *)
@@ -33,6 +34,21 @@ type element = Atom of constraint_n
 
 type formula = Formula of element;;
 
+(*************************)
+(* Variable substitution *)
+(*************************)
+
+(* This type is a necessary wrapper around list elements *)
+(* of the list that is constructed during parsing of *)
+(* 'let' statements in the 'smt2' file format and is *)
+(* then used to do variable substitution according to *)
+(* the parsed 'let' statements *)
+
+type substitution = SubstNum of (num_type * num_type)
+                  | SubstElem of (num_type * element)
+                  | SubstForm of formula;;
+
+type subst_list = SubstList of substitution list;;
 
 
 

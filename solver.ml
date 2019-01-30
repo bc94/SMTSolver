@@ -1590,13 +1590,13 @@ let find_backjump_clause_res assignment conf up_map dl =
                       );;
 
 let backjump_twl_i assignment conf up_map dl = 
-    (*printf "BACKJUMP\n";*)
-    (*Printing.print_assignment assignment; printf "\n\n";
+    (*printf "BACKJUMP\n";
+    Printing.print_assignment assignment; printf "\n\n";
     printf "conf: %s\n" (Printing.print_element conf);*)
     match assignment with 
         | Assignment (xs) -> (
                               match (find_backjump_clause_res assignment conf up_map dl) with
-                                |(Disjunction (ys)) -> (*printf "clause: %s\n level: %s\n\n" (Printing.print_element (Disjunction (ys))) (string_of_int (get_target_decision_level assignment (Disjunction (ys))));*) (
+                                |(Disjunction (ys)) -> (*printf "clause: %s\n\n" (Printing.print_element (Disjunction (ys)));*) (
                                                         match (length ys) with 
                                                             | 0 -> failwith "[Invalid argument] backjump_twl_i: conflict empty"
                                                                    (*let (zs, l) = (backjump_rec_twl assignment 0 (Disjunction (ys)) []) in 
@@ -3141,9 +3141,9 @@ let rec dpll_twl_inc_i_rec assignment formula f_map up_map vsids s_state checkpo
                                                                      (*restart_twl_inc_i ys (learn formula (Disjunction (cf_ls))) (add_clause_to_map bj_map (Disjunction (cf_ls))) (decay_and_update_vsids vsids (Disjunction (cf_ls))) r_state [hd (new_cps)] i_map inv_map*)
                                                         | (Disjunction (vs), cf) -> if cdl < 1 
                                                                                     then ((*printf "test3\n";*) false)
-                                                                                    else (
+                                                                                    else ( 
                                                                                           match (backjump_cdcl formula ys bj_map bj_up_map new_cps cdl (hd cf) i_map inv_map bj_state) with 
-                                                                                            | (_, Assignment ([]), _, _, _, _, _) -> (*printf "test2\n";*) false 
+                                                                                            | (_, Assignment ([]), _, _, _, _, _) -> false 
                                                                                             | (formula_cdcl, assignment_cdcl, map_cdcl, dl_cdcl, up_map_cdcl, state_cdcl, true) -> 
                                                                                                 (* TODO: maybe think about updating vsids in the backjump_cdcl function as well *)
                                                                                                 restart_twl_inc_i assignment_cdcl formula_cdcl map_cdcl up_map_cdcl vsids (*decay_and_update_vsids vsids bj_clause*) r_state [hd (checkpoints)] i_map inv_map

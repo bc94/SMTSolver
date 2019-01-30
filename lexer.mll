@@ -17,12 +17,13 @@ let num = '-'? ['0'-'9'] ['0'-'9']*
 
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
-let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let id = ['a'-'z' 'A'-'Z' '_' '?'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 let par = "(set-info" [^'\n']* ")" | "(set-logic" [^'\n']* ")" | "(declare-fun" [^'\n']* ")" | "(check" [^'\n']* ")" | "(exit)"
 let assert = [' ' '\t']* "assert" [' ' '\t']*
 let and_t = [' ' '\t']* "and" [' ' '\t']*
 let or_t = [' ' '\t']* "or" [' ' '\t']*
 let not_t = [' ' '\t']* "not" [' ' '\t']*
+let let_t = [' ' '\t']* "let" [' ' '\t']*
 
 rule read =
     parse
@@ -63,6 +64,7 @@ rule read =
     | and_t             { AND }
     | or_t              { OR }
     | not_t             { NOT }
+    | let_t             { LET }
     | "="               { EQ }
     | "<"               { LT }
     | ">"               { GT }

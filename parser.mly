@@ -36,6 +36,7 @@ open Types
 %token AND 
 %token OR 
 %token NOT
+%token LET
 %token EQ
 %token LT
 %token GT
@@ -49,7 +50,7 @@ open Types
 %token <string> VAR
 %token EOF
 
-%start <Types.formula option> prog
+%start <Types.subst_list option> prog
 %%
 
 prog:
@@ -58,8 +59,9 @@ prog:
     ;
 
 formula:
-    | OPEN_VALIDITY; e = elem; CLOSE_VALIDITY   { Formula (Not e) }
-    | OPEN_PAR; ASSERT; e = elem_smt2; CLOSE_PAR    { Formula e }
+    | OPEN_VALIDITY; e = elem; CLOSE_VALIDITY   { SubstList ([SubstForm (Formula (Not e))]) }
+    | OPEN_PAR; ASSERT; e = elem_smt2; CLOSE_PAR    { SubstList ([SubstForm (Formula e)]) }
+    | OPEN_PAR; ASSERT; OPEN_PAR; LET; OPEN_PAR; ll = let_list_smt2; CLOSE_PAR; l = let_smt2; CLOSE_PAR; CLOSE_PAR { SubstList (ll @ l) }
     ;
 
 elem_smt2:
@@ -67,6 +69,19 @@ elem_smt2:
     | OPEN_PAR; OR; el = elem_list_smt2; CLOSE_PAR   { Disjunction el }
     | OPEN_PAR; NOT; e = elem_smt2; CLOSE_PAR    { Not e }
     | OPEN_PAR; l = literal_smt2; CLOSE_PAR  { l }
+    | l = literal_smt2  { l }
+    ;
+
+let_list_smt2:
+    | OPEN_PAR; n = num_smt2; e = elem_smt2; CLOSE_PAR; ll = let_list_smt2  { [SubstElem (n, e)] @ ll }
+    | OPEN_PAR; n = num_smt2; l = literal_smt2; CLOSE_PAR; ll = let_list_smt2  { [SubstElem (n, l)] @ ll }
+    | OPEN_PAR; n1 = num_smt2; n2 = num_smt2; CLOSE_PAR; ll = let_list_smt2 { [SubstNum (n1, n2)] @ ll }
+    | (* empty *)   { [] }
+    ;
+
+let_smt2:
+    | OPEN_PAR; LET; OPEN_PAR; ll = let_list_smt2; CLOSE_PAR; l = let_smt2; CLOSE_PAR   { ll @ l }
+    | e = elem_smt2 { [SubstForm (Formula e)] }
     ;
 
 elem_list_smt2:
@@ -76,10 +91,12 @@ elem_list_smt2:
 
 literal_smt2:
     | EQ; n1 = num_smt2; n2 = num_smt2  { Conjunction ([(Atom (Constraint (LessEq (n1, n2))))] @ [(Atom (Constraint (LessEq (n2, n1))))]) }
+    | EQ; OPEN_PAR; n1 = num_smt2; CLOSE_PAR; n2 = num_smt2 { Conjunction ([(Atom (Constraint (LessEq (n1, n2))))] @ [(Atom (Constraint (LessEq (n2, n1))))]) }
     | LT; n1 = num_smt2; n2 = num_l_smt2  { Atom (Constraint (LessEq (n1, n2))) }
     | GT; n1 = num_l_smt2; n2 = num_smt2  { Atom (Constraint (LessEq (n2, n1))) }
     | LEQ; n1 = num_smt2; n2 = num_smt2 { Atom (Constraint (LessEq (n1, n2))) }
     | GEQ; n1 = num_smt2; n2 = num_smt2 { Atom (Constraint (LessEq (n2, n1))) }
+    | v = VAR   { Atom (RVar (v)) }
     ;
 
 num_smt2:
@@ -96,7 +113,7 @@ num_l_smt2:
     | OPEN_PAR; TIMES; n1 = num_smt2; n2 = num_smt2; CLOSE_PAR  { Sum ([(Prod ([n1; n2])); (Num (-1))]) }
     | OPEN_PAR; DIVIDED; n1 = NUM; n2 = NUM; CLOSE_PAR    { Div (Num (n1 - n2), Num (n2)) }
     | OPEN_PAR; DIVIDED; OPEN_PAR; MINUS; n1 = NUM; CLOSE_PAR; n2 = NUM CLOSE_PAR    { Div (Num ((-1) * (n1 - n2)), Num (n2)) }
-    | v = var_smt2  { v }
+    | v = var_smt2  { Sum ([v; (Num (-1))]) }
     ;
 
 number_smt2:

@@ -1,1 +1,1 @@
-val prog: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> Types.formula option
+val prog: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> Types.subst_list option
