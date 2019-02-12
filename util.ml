@@ -20,6 +20,22 @@ let add_if_is_mem xs x = if (List.mem x xs)
 
 let remove_duplicates xs = List.fold_left add_if_is_mem [] xs;;
 
+let rec construct_modifiable_formula_clause c =
+    match c with 
+        | Disjunction ([]) -> []
+        | Disjunction (x :: xs) -> [x] @ (construct_modifiable_formula_clause (Disjunction (xs)));;
+
+let rec construct_modifiable_formula_disj l = 
+    match l with
+     | [] -> []
+     | x :: xs -> let ys = construct_modifiable_formula_clause x in [(ys, ys)] @ (construct_modifiable_formula_disj xs);;
+
+let construct_modifiable_formula_conj f = 
+    let Conjunction (xs) = f in construct_modifiable_formula_disj xs;;
+
+let construct_modifiable_formula formula = 
+    let Formula (f) = formula in construct_modifiable_formula_conj f;;
+
 let rec to_ceta_expr_l l =
     match l with
         | [] -> []
@@ -30,7 +46,7 @@ and to_ceta_expr expr =
         | Sum (xs) -> Simplex_Validity_Checker.Fun (Simplex_Validity_Checker.SumF (Simplex_Validity_Checker.nat_of_integer (big_int_of_int (List.length xs))), to_ceta_expr_l xs)
         | Prod (xs) -> Simplex_Validity_Checker.Fun (Simplex_Validity_Checker.ProdF (Simplex_Validity_Checker.nat_of_integer (big_int_of_int (List.length xs))), to_ceta_expr_l xs)
         | Num (x) -> Simplex_Validity_Checker.Fun (Simplex_Validity_Checker.ConstF (Simplex_Validity_Checker.Int_of_integer (big_int_of_int x)), [])
-        | Var (x) -> Simplex_Validity_Checker.Var (Simplex_Validity_Checker.explode x)
+        | Var (x) -> Simplex_Validity_Checker.Var ((Simplex_Validity_Checker.explode x), Simplex_Validity_Checker.IntT)
         | _ -> failwith "[Invalid argument] to_ceta_expr";;
 
 let to_ceta_constraint cons =
