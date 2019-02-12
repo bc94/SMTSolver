@@ -72,6 +72,23 @@ let rec is_assigned_i_map assignment assigned_map literal =
         | Not (Atom (AuxVar (x))) -> Assignment_Map.mem x aux
         | _ -> failwith "[Invalid argument] is_assigned_i_map: second argument is not a literal or non-indexed representations are used";;
 
+let rec is_assigned_or_true_i_map assignment assigned_map literal = 
+    let (indexed, aux) = assigned_map in
+    match literal with 
+        | Atom (Index (x)) -> if Assignment_Map.mem x indexed
+                              then (true, Assignment_Map.find x indexed)
+                              else (false, false)
+        | Atom (AuxVar (x)) -> if Assignment_Map.mem x aux
+                               then (true, Assignment_Map.find x aux)
+                               else (false, false)
+        | Not (Atom (Index (x))) -> if Assignment_Map.mem x indexed
+                                    then (true, not (Assignment_Map.find x indexed))
+                                    else (false, false)
+        | Not (Atom (AuxVar (x))) -> if Assignment_Map.mem x aux
+                                    then (true, not (Assignment_Map.find x aux))
+                                    else (false, false)
+        | _ -> failwith "[Invalid argument] is_assigned_or_true_i_map: second argument is not a literal or non-indexed representations are used";;
+
 let rec is_true (assignment : assignment) (literal : element) = 
     match assignment with
         | Assignment ([]) -> false
@@ -1507,9 +1524,9 @@ let rec choose_decision_literal assignment clause =
         | _ -> failwith "[Invalid argument] choose_decision_literal: argument not a clause";;
 
 let rec choose_decision_literal_i assignment clause = 
-    (*if is_clause_satisfied_i assignment clause 
+    if is_clause_satisfied_i assignment clause 
     then []
-    else*) (
+    else (
          match clause with
             | Disjunction ([]) -> []
             | Disjunction (x :: xs) -> if is_assigned_i assignment x 
@@ -2395,12 +2412,15 @@ let rec choose_decision_literal_vsids assignment vsids =
      | _ -> failwith "[Invalid argument] decision_twl_inc: formula not in CNF";;*)
 
 let rec choose_decision_literal_i_map assignment assigned_map clause = 
-        (
+        (*if is_clause_satisfied_i_map assignment assigned_map clause 
+        then []
+        else*) (
          match clause with
             | Disjunction ([]) -> []
-            | Disjunction (x :: xs) -> if is_assigned_i_map assignment assigned_map x 
-                                       then choose_decision_literal_i_map assignment assigned_map (Disjunction (xs))
-                                       else [x]
+            | Disjunction (x :: xs) -> match (is_assigned_or_true_i_map assignment assigned_map x) with 
+                                       | (true, true) -> []
+                                       | (true, false) -> choose_decision_literal_i_map assignment assigned_map (Disjunction (xs))
+                                       | (false, _) -> [x]
             | _ -> failwith "[Invalid argument] choose_decision_literal: argument not a clause"
         );;
 
@@ -3395,7 +3415,7 @@ let rec dpll_twl_inc_i_rec assignment assigned_map formula f_map up_map s_state 
                                                                              let Disjunction (conf_list) = z in 
                                                                               let ys = (clauselist_to_neg_clause (conf_list)) in 
                                                                                 restart_twl_inc_i n_assignment (learn formula ys) (add_clause_to_map n_map ys) n_up_map r_state [hd (checkpoints)] i_map inv_map r_threshold
-                                                                        )
+                                                                         )
                                                                     else
                                                                     ( 
                                                                     let (ys, l, bj_clause, bj_up_map) = (backjump_twl_i n_assignment (hd n_conf) n_up_map new_dl) in 
@@ -3585,7 +3605,7 @@ and dpll_twl_inc_i formula up_map i_map inv_map s_state checkpoints =
                                     let (n_assignment, n_assigned_map, n_map, n_up_map, n_state, conf) = unit_propagation_twl_inc_i_map new_assignment new_assigned_map f_map_new new_up_map new_state i_map inv_map prop 0 in 
                                         (
                                         match conf with
-                                            | [] -> dpll_twl_inc_i_rec n_assignment n_assigned_map new_formula n_map n_up_map n_state checkpoints i_map inv_map 0 0 10
+                                            | [] -> dpll_twl_inc_i_rec n_assignment n_assigned_map new_formula n_map n_up_map n_state checkpoints i_map inv_map 0 0 5
                                             | x :: xs -> false
                                         )
                             )
