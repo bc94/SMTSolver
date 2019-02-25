@@ -6,3 +6,5 @@ run_solver.p.native
 IA_Checker.ml
 error.txt
 results.txt
+results_ceta.txt
+error_ceta.txt

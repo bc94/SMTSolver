@@ -92,8 +92,8 @@ elem_list_smt2:
 literal_smt2:
     | EQ; n1 = num_smt2; n2 = num_smt2  { Conjunction ([(Atom (Constraint (LessEq (n1, n2))))] @ [(Atom (Constraint (LessEq (n2, n1))))]) }
     | EQ; OPEN_PAR; n1 = num_smt2; CLOSE_PAR; n2 = num_smt2 { Conjunction ([(Atom (Constraint (LessEq (n1, n2))))] @ [(Atom (Constraint (LessEq (n2, n1))))]) }
-    | LT; n1 = num_smt2; n2 = num_l_smt2  { Atom (Constraint (LessEq (n1, n2))) }
-    | GT; n1 = num_l_smt2; n2 = num_smt2  { Atom (Constraint (LessEq (n2, n1))) }
+    | LT; n1 = num_smt2; n2 = num_smt2  { Atom (Constraint (Less (n1, n2))) }
+    | GT; n1 = num_smt2; n2 = num_smt2  { Atom (Constraint (Less (n2, n1))) }
     | LEQ; n1 = num_smt2; n2 = num_smt2 { Atom (Constraint (LessEq (n1, n2))) }
     | GEQ; n1 = num_smt2; n2 = num_smt2 { Atom (Constraint (LessEq (n2, n1))) }
     | v = VAR   { Atom (RVar (v)) }
@@ -153,7 +153,7 @@ constr:
     ;
 
 num_pair_l:
-    | n1 = num; n2 = num_l    { LessEq (n1, n2) }
+    | n1 = num; n2 = num    { Less (n1, n2) }
     ;
 
 num_pair_le:

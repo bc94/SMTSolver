@@ -3,7 +3,7 @@ module Simplex_Validity_Checker : sig
   type nat
   val nat_of_integer : Big_int.big_int -> nat
   type char
-  type rat
+  type rat = Frct of (int * int)
   type ('a, 'b) term = Var of 'b | Fun of 'a * ('a, 'b) term list
   type ty = BoolT | IntT
   type 'a set
