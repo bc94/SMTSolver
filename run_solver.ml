@@ -33,7 +33,8 @@ let transform_and_run_ceta formula =
                 | false -> failwith "[Invalid argument] formula not well formed with respect to the Simplex_Validity_Checker module";;
 
 let transform_substitute_and_run_ceta (subst_form_pair : 'a * 'b) = 
-        let f = Util.to_ceta_format (Util.variable_substitution subst_form_pair) in 
+        let (xs, Formula (form)) = subst_form_pair in 
+        let f = Util.to_ceta_format (Util.variable_substitution (xs, Formula (Not (form)))) in 
         match (Simplex_Validity_Checker.check_well_formed_RA_formula_string_vars f) with
                 | true -> ( 
                            match (Simplex_Validity_Checker.check_valid_RA_formula_string_vars f) with
@@ -68,13 +69,13 @@ let run_solver_indexed (value : subst_list) =
                                         | 1 -> (
                                                 match (hd (x :: xs)) with 
                                                  | Some (SubstForm (formula)) -> Util.time transform_and_run_indexed formula;
-                                                                                 Util.time transform_and_run_ceta formula
+                                                                                 (*Util.time transform_and_run_ceta formula*)
                                                  | _ -> failwith "Result of parsing not a formula"
                                                )
                                         | _ -> (
                                                 match (hd (rev (x :: xs))) with 
                                                  | Some (SubstForm (formula)) -> Util.time transform_substitute_and_run_indexed ((tl (rev (x :: xs))), formula);
-                                                                                 Util.time transform_substitute_and_run_ceta ((tl (rev (x :: xs))), formula)
+                                                                                 (*Util.time transform_substitute_and_run_ceta ((tl (rev (x :: xs))), formula)*)
                                                  | _ -> failwith "Result of parsing not a formula"
                                                )
                                 )

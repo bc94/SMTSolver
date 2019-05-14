@@ -1,5 +1,6 @@
 _build/
 testdata/
+results_final/
 gmon.out
 run_solver.native
 run_solver.p.native
@@ -8,3 +9,6 @@ error.txt
 results.txt
 results_ceta.txt
 error_ceta.txt
+results_twl_smt2.txt
+results_twl.txt
+error_smt2.txt
