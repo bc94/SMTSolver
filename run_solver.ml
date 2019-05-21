@@ -5,13 +5,13 @@ open Types
 open List
 open Simplex_Validity_Checker
 
-let transform_and_run_list formula = 
+(*let transform_and_run_list formula = 
         let (f, cs, i_map, inv_map, _) = (Tseitin.tseitin_transformation_inc_i formula) in
-           Solver.sat_inc_i_list (f, cs, i_map, inv_map);;
+           Solver.sat_inc_i_list (f, cs, i_map, inv_map);;*)
 
-let transform_substitute_and_run_list (subst_form_pair : 'a * 'b) = 
+(*let transform_substitute_and_run_list (subst_form_pair : 'a * 'b) = 
         let (f, cs, i_map, inv_map, _) = (Tseitin.tseitin_transformation_inc_i (Util.variable_substitution subst_form_pair)) in
-           Solver.sat_inc_i_list (f, cs, i_map, inv_map);;
+           Solver.sat_inc_i_list (f, cs, i_map, inv_map);;*)
 
 let transform_and_run_indexed formula = 
         let (f, cs, i_map, inv_map, vsids) = (Tseitin.tseitin_transformation_inc_i formula) in
@@ -43,7 +43,7 @@ let transform_substitute_and_run_ceta (subst_form_pair : 'a * 'b) =
                           )
                 | false -> failwith "[Invalid argument] formula not well formed with respect to the Simplex_Validity_Checker module";;
 
-let run_solver_list (value : subst_list) = 
+(*let run_solver_list (value : subst_list) = 
     match value with 
         | SubstList (x :: xs) -> (
                                 match length (x :: xs) with
@@ -60,7 +60,7 @@ let run_solver_list (value : subst_list) =
                                                  | _ -> failwith "Result of parsing not a formula"
                                                )
                                 )
-        | SubstList ([]) -> failwith "Parsed formula empty";;
+        | SubstList ([]) -> failwith "Parsed formula empty";;*)
 
 let run_solver_indexed (value : subst_list) = 
     match value with 
@@ -153,7 +153,7 @@ let rec parse lexbuf opt =
    match parse_with_error lexbuf with
         | Some (value) -> (
                          match opt with
-                            | "list" -> run_solver_list value
+                            (*| "list" -> run_solver_list value*)
                             | "indexed" -> run_solver_indexed value 
                             | "incremental" -> Util.time run_solver_incremental value
                             | "twl" -> Util.time run_solver_twl value

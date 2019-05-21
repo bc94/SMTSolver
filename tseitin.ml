@@ -1,4 +1,5 @@
 module Index_Map = Map.Make(String);;
+module Index_Map_Opt = Map.Make(struct type t = Types.element let compare = compare end);;
 module Inv_Map = Map.Make(struct type t = int let compare = compare end);;
 
 open Types
@@ -197,7 +198,7 @@ let rec transform_elem_inc e cs i_map inv_map i n_aux n_last =
                        [Disjunction ([Not (Atom (x)); Atom (AuxVar n_aux)])],
                        n_last,
                        (cs @ [(x, true, false, 0)] @ [(x, false, false, 0)]),
-                       (Index_Map.add ("-" ^ Printing.print_constraint_n x) (i + 1) (Index_Map.add (Printing.print_constraint_n x) i (i_map))),
+                       (Index_Map_Opt.add (Not (Atom x)) (i + 1) (Index_Map_Opt.add (Atom x) i (i_map))),
                        (Inv_Map.add (i + 1) (x, false, false, 0) (Inv_Map.add i (x, true, false, 0) inv_map)),
                        i + 2)
         | _ -> failwith "[Invalid argument]: transform_elem_inc";;
@@ -205,7 +206,7 @@ let rec transform_elem_inc e cs i_map inv_map i n_aux n_last =
 let tseitin_transformation_inc_n f n_aux n_last = 
     match f with
         | Formula (x) -> (
-                          match (transform_elem_inc x [] Index_Map.empty Inv_Map.empty 0 n_aux n_last) with
+                          match (transform_elem_inc x [] Index_Map_Opt.empty Inv_Map.empty 0 n_aux n_last) with
                             | (xs, n, cs, i_map, inv_map, i) -> (Formula (Conjunction ([Atom (AuxVar n_aux)] @ xs)), Assignment (cs), i_map, inv_map)
                             | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n"
                          )
@@ -331,10 +332,10 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                                         )
                                        )
                               )
-        | Atom (x) -> let s = (Printing.print_constraint_n x) in 
-                        if Index_Map.mem s i_map 
+        | Atom (x) -> (*let s = (Printing.print_constraint_n x) in *)
+                        if Index_Map_Opt.mem e i_map 
                         then (
-                              let ind = (Index_Map.find s i_map) in
+                              let ind = (Index_Map_Opt.find e i_map) in
                                 ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (Index ind)])] @ 
                                 [Disjunction ([Not (Atom (Index ind)); Atom (AuxVar n_aux)])],
                                 n_last,
@@ -350,7 +351,7 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                [Disjunction ([Not (Atom (Index i)); Atom (AuxVar n_aux)])],
                                n_last,
                                (cs @ [(x, true, false, 0)] @ [(x, false, false, 0)]),
-                               (Index_Map.add ("-" ^ Printing.print_constraint_n x) (i + 1) (Index_Map.add (Printing.print_constraint_n x) i (i_map))),
+                               (Index_Map_Opt.add (Not (Atom x)) (i + 1) (Index_Map_Opt.add (Atom x) i (i_map))),
                                (Inv_Map.add (i + 1) (x, false, false, 0) (Inv_Map.add i (x, true, false, 0) inv_map)),
                                i + 2,
                                vsids)
@@ -361,7 +362,7 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
 let tseitin_transformation_inc_n_i f n_aux n_last = 
     match f with
         | Formula (x) -> (
-                          match (transform_elem_inc_i x [] Index_Map.empty Inv_Map.empty 1 n_aux n_last []) with
+                          match (transform_elem_inc_i x [] Index_Map_Opt.empty Inv_Map.empty 1 n_aux n_last []) with
                             | (xs, n, cs, i_map, inv_map, i, vsids) -> (Formula (Conjunction ([Atom (AuxVar n_aux)] @ xs)), Assignment (cs), i_map, inv_map, vsids)
                             | _ -> failwith "[Invalid argument]: tseitin_transformation_inc_n" 
                          )
