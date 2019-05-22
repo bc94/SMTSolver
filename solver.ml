@@ -3,7 +3,7 @@ module PS_Map = Map.Make(struct type t = int let compare = compare end);;
 module UP_Map = Map.Make(String);;
 module Assignment_Map = Map.Make(struct type t = int let compare = compare end);;
 module TWL_Map_Opt = Map.Make(struct type t = Types.element let compare = compare end);;
-module UP_Map_OPt = Map.Make(struct type t = Types.element let compare = compare end);;
+module UP_Map_Opt = Map.Make(struct type t = Types.element let compare = compare end);;
 
 open String
 open Types
@@ -1224,12 +1224,12 @@ let rec check_clause assignment f_map clause literal prop conf =
                                                             then (
                                                                   match (get_first_unassigned_var_inc assignment (Disjunction (ws))) with
                                                                             | [] -> (f_map, prop, [clause])
-                                                                            | [x] -> (TWL_Map.add (Printing.print_element w1) 
-                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
-                                                                                            (TWL_Map.add (Printing.print_element w2) 
-                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
-                                                                                                            (TWL_Map.add (Printing.print_element x) 
-                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                            | [x] -> (TWL_Map_Opt.add  w1
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w1 f_map))
+                                                                                            (TWL_Map_Opt.add w2 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w2 f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                            (TWL_Map_Opt.add x 
+                                                                                                                        ((TWL_Map_Opt.find x f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
                                                                                                                         f_map)),
                                                                                         [(x, clause)], 
                                                                                         conf)
@@ -1237,12 +1237,12 @@ let rec check_clause assignment f_map clause literal prop conf =
                                                             else (
                                                                 match (get_first_unassigned_var_inc assignment (Disjunction (ws))) with
                                                                     | [] -> (f_map, [(w2, clause)], conf)
-                                                                    | [x] -> (TWL_Map.add (Printing.print_element w1) 
-                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
-                                                                                            (TWL_Map.add (Printing.print_element w2) 
-                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
-                                                                                                            (TWL_Map.add (Printing.print_element x) 
-                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                    | [x] -> (TWL_Map_Opt.add w1 
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w1 f_map))
+                                                                                            (TWL_Map_Opt.add w2 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w2 f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                            (TWL_Map_Opt.add x
+                                                                                                                        ((TWL_Map_Opt.find x f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
                                                                                                                         f_map)),
                                                                                 prop, 
                                                                                 conf)
@@ -1254,12 +1254,12 @@ let rec check_clause assignment f_map clause literal prop conf =
                                                                         then (
                                                                               match (get_first_unassigned_var_inc assignment (Disjunction (ws))) with
                                                                                         | [] -> (f_map, prop, [clause])
-                                                                                        | [x] -> (TWL_Map.add (Printing.print_element w2) 
-                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
-                                                                                            (TWL_Map.add (Printing.print_element w1) 
-                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
-                                                                                                            (TWL_Map.add (Printing.print_element x) 
-                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                        | [x] -> (TWL_Map_Opt.add w2
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w2 f_map))
+                                                                                            (TWL_Map_Opt.add w1 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w1 f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                            (TWL_Map_Opt.add x 
+                                                                                                                        ((TWL_Map_Opt.find x f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
                                                                                                                         f_map)),
                                                                                                 [(x, clause)], 
                                                                                                 conf)
@@ -1267,12 +1267,12 @@ let rec check_clause assignment f_map clause literal prop conf =
                                                                         else (
                                                                             match (get_first_unassigned_var_inc assignment (Disjunction (ws))) with
                                                                                 | [] -> (f_map, [(w1, clause)], conf)
-                                                                                | [x] -> (TWL_Map.add (Printing.print_element w2) 
-                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
-                                                                                            (TWL_Map.add (Printing.print_element w1) 
-                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
-                                                                                                            (TWL_Map.add (Printing.print_element x) 
-                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                | [x] -> (TWL_Map_Opt.add w2 
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w2 f_map))
+                                                                                            (TWL_Map_Opt.add w1 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w1 f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                            (TWL_Map_Opt.add x 
+                                                                                                                        ((TWL_Map_Opt.find x f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
                                                                                                                         f_map)),
                                                                                                 prop, 
                                                                                                 conf)
@@ -1295,12 +1295,12 @@ let check_clause_i assignment assigned_map f_map clause literal prop conf =
                                                             then (
                                                                   match (get_first_unassigned_var_map assignment assigned_map (Disjunction (ws))) with
                                                                             | [] -> (f_map, prop, [clause])
-                                                                            | [x] -> (TWL_Map.add (Printing.print_element w1) 
-                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
-                                                                                            (TWL_Map.add (Printing.print_element w2) 
-                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
-                                                                                                            (TWL_Map.add (Printing.print_element x) 
-                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                            | [x] -> (TWL_Map_Opt.add w1 
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w1 f_map))
+                                                                                            (TWL_Map_Opt.add w2
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w2 f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                            (TWL_Map_Opt.add x
+                                                                                                                        ((TWL_Map_Opt.find x f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
                                                                                                                         f_map)),
                                                                                         [(x, clause)], 
                                                                                         conf)
@@ -1308,12 +1308,12 @@ let check_clause_i assignment assigned_map f_map clause literal prop conf =
                                                             else (
                                                                 match (get_first_unassigned_var_map assignment assigned_map (Disjunction (ws))) with
                                                                     | [] -> (f_map, [(w2, clause)], conf)
-                                                                    | [x] -> (TWL_Map.add (Printing.print_element w1) 
-                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map))
-                                                                                            (TWL_Map.add (Printing.print_element w2) 
-                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
-                                                                                                            (TWL_Map.add (Printing.print_element x) 
-                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                    | [x] -> (TWL_Map_Opt.add w1
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w1 f_map))
+                                                                                            (TWL_Map_Opt.add w2 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w2 f_map)) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
+                                                                                                            (TWL_Map_Opt.add x
+                                                                                                                        ((TWL_Map_Opt.find x f_map) @ [(Disjunction (x :: w2 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w1]))))])
                                                                                                                         f_map)),
                                                                                 prop, 
                                                                                 conf)
@@ -1325,12 +1325,12 @@ let check_clause_i assignment assigned_map f_map clause literal prop conf =
                                                                         then (
                                                                               match (get_first_unassigned_var_map assignment assigned_map (Disjunction (ws))) with
                                                                                         | [] -> (f_map, prop, [clause])
-                                                                                        | [x] -> (TWL_Map.add (Printing.print_element w2) 
-                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
-                                                                                            (TWL_Map.add (Printing.print_element w1) 
-                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
-                                                                                                            (TWL_Map.add (Printing.print_element x) 
-                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                        | [x] -> (TWL_Map_Opt.add w2
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w2 f_map))
+                                                                                            (TWL_Map_Opt.add w1
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w1 f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                            (TWL_Map_Opt.add x
+                                                                                                                        ((TWL_Map_Opt.find x f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
                                                                                                                         f_map)),
                                                                                                 [(x, clause)], 
                                                                                                 conf)
@@ -1338,12 +1338,12 @@ let check_clause_i assignment assigned_map f_map clause literal prop conf =
                                                                         else (
                                                                             match (get_first_unassigned_var_map assignment assigned_map (Disjunction (ws))) with
                                                                                 | [] -> (f_map, [(w1, clause)], conf)
-                                                                                | [x] -> (TWL_Map.add (Printing.print_element w2) 
-                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w2) f_map))
-                                                                                            (TWL_Map.add (Printing.print_element w1) 
-                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map.find (Printing.print_element w1) f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
-                                                                                                            (TWL_Map.add (Printing.print_element x) 
-                                                                                                                        ((TWL_Map.find (Printing.print_element x) f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                | [x] -> (TWL_Map_Opt.add w2
+                                                                                            (filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w2 f_map))
+                                                                                            (TWL_Map_Opt.add w1 
+                                                                                                            ((filter (fun c -> (compare c clause) <> 0) (TWL_Map_Opt.find w1 f_map)) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
+                                                                                                            (TWL_Map_Opt.add x
+                                                                                                                        ((TWL_Map_Opt.find x f_map) @ [(Disjunction (x :: w1 :: (filter (fun l -> (compare l x) <> 0) (ws @ [w2]))))])
                                                                                                                         f_map)),
                                                                                                 prop, 
                                                                                                 conf)
@@ -1369,9 +1369,9 @@ let rec update_clauses_i assignment assigned_map f_map clauses literal prop conf
 
 (* NOTE: literal should always be the negation of the literal that was just assigned *)
 (*       This function then updates the watch list of the negated literal *)
-let update_watch_lists assignment f_map literal = update_clauses assignment f_map (TWL_Map.find (Printing.print_element literal) f_map) literal [] [];;
+let update_watch_lists assignment f_map literal = update_clauses assignment f_map (TWL_Map_Opt.find literal f_map) literal [] [];;
 
-let update_watch_lists_i assignment assigned_map f_map literal = update_clauses_i assignment assigned_map f_map (TWL_Map.find (Printing.print_element literal) f_map) literal [] [];;
+let update_watch_lists_i assignment assigned_map f_map literal = update_clauses_i assignment assigned_map f_map (TWL_Map_Opt.find literal f_map) literal [] [];;
 
 let rec update_watch_lists_l_rec assignment f_map l_list prop conf =
     match l_list with
@@ -1418,9 +1418,9 @@ let rec decision_twl formula assignment f_map up_map dl =
                                                     let Assignment (xs) = assignment in
                                                     match choose_decision_literal assignment (hd cs) with
                                                         | Atom (x) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
-                                                                        (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction ([])) up_map), prop, conf)
+                                                                        (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, (UP_Map_Opt.add (Atom (x)) (Disjunction ([])) up_map), prop, conf)
                                                         | Not (Atom (x)) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in
-                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction ([])) up_map), prop, conf) 
+                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, (UP_Map_Opt.add (Not (Atom (x))) (Disjunction ([])) up_map), prop, conf) 
                                                         | _ -> failwith "[Invalid argument] decision_twl: choose_decision_literal did not return a literal"
                                                 )
                                     )
@@ -1436,14 +1436,14 @@ let rec unit_propagation_twl assignment f_map up_map prop dl =
                         | Atom (y) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map (Not (Atom (y))) in 
                                         (
                                          match conf with 
-                                            | [] -> unit_propagation_twl (Assignment (ys @ [(y, true, false, dl)])) new_map (UP_Map.add (Printing.print_element x) clause up_map) (xs @ new_prop) dl
-                                            | z :: zs -> ((Assignment (ys @ [(y, true, false, dl)])), new_map, (UP_Map.add (Printing.print_element x) clause up_map), z :: zs)
+                                            | [] -> unit_propagation_twl (Assignment (ys @ [(y, true, false, dl)])) new_map (UP_Map_Opt.add x clause up_map) (xs @ new_prop) dl
+                                            | z :: zs -> ((Assignment (ys @ [(y, true, false, dl)])), new_map, (UP_Map_Opt.add x clause up_map), z :: zs)
                                         )
                         | Not (Atom (y)) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map (Atom (y)) in 
                                         ( 
                                          match conf with
-                                            | [] -> unit_propagation_twl (Assignment (ys @ [(y, false, false, dl)])) new_map (UP_Map.add (Printing.print_element x) clause up_map) (xs @ new_prop) dl
-                                            | z :: zs -> ((Assignment (ys @ [(y, false, false, dl)])), new_map, (UP_Map.add (Printing.print_element x) clause up_map), z :: zs)
+                                            | [] -> unit_propagation_twl (Assignment (ys @ [(y, false, false, dl)])) new_map (UP_Map_Opt.add x clause up_map) (xs @ new_prop) dl
+                                            | z :: zs -> ((Assignment (ys @ [(y, false, false, dl)])), new_map, (UP_Map_Opt.add x clause up_map), z :: zs)
                                         )
                         | _ -> failwith "[Invalid argument] unit_propagation_twl: list of propagation literals contains a non-literal element"
                      );;
@@ -1561,12 +1561,12 @@ let rec find_backjump_clause_res_rec assignment clause up_map dl =
     else (
           match (get_last_assigned_literal (rev xs) clause) with 
             | Atom (x) -> ( 
-                           match (UP_Map.find (Printing.print_element (Not (Atom (x)))) up_map) with 
+                           match (UP_Map_Opt.find (Not (Atom (x))) up_map) with 
                             | Disjunction ([]) -> failwith "[Invalid argument] find_backjump_clause_res_rec: Two non-propagated literals of the same level contained in a clause"
                             | Disjunction (y :: ys) -> find_backjump_clause_res_rec assignment (resolve clause (Disjunction (y :: ys)) (Atom (x))) up_map dl
                           )
             | Not (Atom (x)) -> ( 
-                                 match (UP_Map.find (Printing.print_element (Atom (x))) up_map) with 
+                                 match (UP_Map_Opt.find (Atom (x)) up_map) with 
                                     | Disjunction ([]) -> failwith "[Invalid argument] find_backjump_clause_res_rec: Two non-propagated literals of the same level contained in a clause"
                                     | Disjunction (y :: ys) -> find_backjump_clause_res_rec assignment (resolve clause (Disjunction (y :: ys)) (Not (Atom (x)))) up_map dl
                                 )
@@ -1576,14 +1576,14 @@ let find_backjump_clause_res assignment conf up_map dl =
     let Assignment (xs) = assignment in
     match (get_last_assigned_literal (rev xs) conf) with 
         | Atom (x) -> (
-                       match (UP_Map.find (Printing.print_element (Not (Atom (x)))) up_map) with 
+                       match (UP_Map_Opt.find (Not (Atom (x))) up_map) with 
                         | Disjunction ([]) -> if (num_last_dl_literals assignment conf dl) > 1 
                                               then failwith "[Invalid argument] find_backjump_clause_res"
                                               else conf
                         | Disjunction (y :: ys) -> find_backjump_clause_res_rec assignment (resolve conf (Disjunction (y :: ys)) (Atom (x))) up_map dl
                       )
         | Not (Atom (x)) -> (
-                       match (UP_Map.find (Printing.print_element (Atom (x))) up_map) with 
+                       match (UP_Map_Opt.find (Atom (x)) up_map) with 
                         | Disjunction ([]) -> if (num_last_dl_literals assignment conf dl) > 1 
                                               then failwith "[Invalid argument] find_backjump_clause_res"
                                               else conf
@@ -1624,12 +1624,12 @@ let backjump_twl assignment conf up_map dl=
                                                         match (length ys) with 
                                                             | 0 -> failwith "[Invalid argument] backjump_twl: conflict empty"
                                                             | 1 -> let (zs, l) = (backjump_rec_twl assignment 0 (Disjunction (ys)) []) in
-                                                                    (Assignment (zs), l, Disjunction (ys), (UP_Map.add (Printing.print_element (hd ys)) (Disjunction ([])) up_map))
+                                                                    (Assignment (zs), l, Disjunction (ys), (UP_Map_Opt.add (hd ys) (Disjunction ([])) up_map))
                                                             | _ ->  let (zs, l) = (backjump_rec_i assignment assignment (get_target_decision_level assignment (Disjunction (ys))) (Disjunction (ys)) []) in
                                                                     (
                                                                      match l with  
-                                                                        | Atom (x) -> (Assignment (zs), l, Disjunction (ys), (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction (ys)) up_map))
-                                                                        | Not (Atom (x)) -> (Assignment (zs), l, Disjunction (ys), (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction (ys)) up_map))
+                                                                        | Atom (x) -> (Assignment (zs), l, Disjunction (ys), (UP_Map_Opt.add (Not (Atom (x))) (Disjunction (ys)) up_map))
+                                                                        | Not (Atom (x)) -> (Assignment (zs), l, Disjunction (ys), (UP_Map_Opt.add (Atom (x)) (Disjunction (ys)) up_map))
                                                                     )
                                                         )
                                 | _ -> failwith "[Invalid argument] backjump_twl: find_backjump_clause did not return a clause"
@@ -1644,13 +1644,13 @@ let backjump_twl_i assignment conf up_map dl =
                                                             | 0 -> failwith "[Invalid argument] backjump_twl_i: conflict empty"
                                                             | 1 -> (
                                                                     let (zs, l) = (backjump_rec_twl assignment 0 (Disjunction (ys)) []) in
-                                                                                (Assignment (zs), l, Disjunction (ys), (UP_Map.add (Printing.print_element (hd ys)) (Disjunction ([])) up_map))
+                                                                                (Assignment (zs), l, Disjunction (ys), (UP_Map_Opt.add (hd ys) (Disjunction ([])) up_map))
                                                                    )
                                                             | _ ->  let (zs, l) = (backjump_rec_i assignment assignment (get_target_decision_level assignment (Disjunction (ys))) (Disjunction (ys)) []) in
                                                                     (
                                                                      match l with  
-                                                                        | Atom (x) -> (Assignment (zs), l, Disjunction (ys), (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction (ys)) up_map))
-                                                                        | Not (Atom (x)) -> (Assignment (zs), l, Disjunction (ys), (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction (ys)) up_map))
+                                                                        | Atom (x) -> (Assignment (zs), l, Disjunction (ys), (UP_Map_Opt.add (Not (Atom (x))) (Disjunction (ys)) up_map))
+                                                                        | Not (Atom (x)) -> (Assignment (zs), l, Disjunction (ys), (UP_Map_Opt.add (Atom (x)) (Disjunction (ys)) up_map))
                                                                     )
                                                         )
                                 | _ -> failwith "[Invalid argument] backjump_twl: find_backjump_clause did not return a clause"
@@ -1665,7 +1665,7 @@ let rec construct_watch_lists formula m =
         | Formula (Conjunction ([])) -> m
         | Formula (Conjunction (x :: xs)) -> (
                                               match x with
-                                                | Disjunction (w1 :: w2 :: ws) -> construct_watch_lists (Formula (Conjunction (xs))) (TWL_Map.add (Printing.print_element w2) ((TWL_Map.find (Printing.print_element w2) m) @ [x]) (TWL_Map.add (Printing.print_element w1) ((TWL_Map.find (Printing.print_element w1) m) @ [x]) m))
+                                                | Disjunction (w1 :: w2 :: ws) -> construct_watch_lists (Formula (Conjunction (xs))) (TWL_Map_Opt.add w2 ((TWL_Map_Opt.find w2 m) @ [x]) (TWL_Map_Opt.add w1 ((TWL_Map_Opt.find w1 m) @ [x]) m))
                                                 | _ -> failwith "[Invalid argument] construct_watch_lists: clause contains less than 2 literals"
                                              )
         | _ -> failwith "[Invalid argument] construct_watch_lists: formula not in CNF";;
@@ -1675,8 +1675,8 @@ let rec add_clause_keys clause m literals =
         | Disjunction ([]) -> (m, literals)
         | Disjunction (x :: xs) -> (
                                     match x with
-                                        | Atom (y) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Not (Atom (y)))) [] m)) (literals @ [x])
-                                        | Not (Atom (y)) -> add_clause_keys (Disjunction (xs)) (TWL_Map.add (Printing.print_element x) [] (TWL_Map.add (Printing.print_element (Atom (y))) [] m)) (literals @ [x])
+                                        | Atom (y) -> add_clause_keys (Disjunction (xs)) (TWL_Map_Opt.add x [] (TWL_Map_Opt.add (Not (Atom (y))) [] m)) (literals @ [x])
+                                        | Not (Atom (y)) -> add_clause_keys (Disjunction (xs)) (TWL_Map_Opt.add x [] (TWL_Map_Opt.add (Atom (y)) [] m)) (literals @ [x])
                                         | _ -> failwith "[Invalid argument] add_clause_keys: clause contains non-literals"
                                    )
         | _ -> failwith "[Invalid argument] add_clause_keys: formula not in CNF or contains unit clauses";;
@@ -1695,11 +1695,11 @@ let rec add_all_keys formula_it formula m literals =
 (* Needed for learning *)
 let add_clause_to_map f_map clause = 
     match clause with 
-        | Disjunction (w1 :: w2 :: ws) -> TWL_Map.add (Printing.print_element w2) ((TWL_Map.find (Printing.print_element w2) f_map) @ [clause]) (TWL_Map.add (Printing.print_element w1) ((TWL_Map.find (Printing.print_element w1) f_map) @ [clause]) f_map)
+        | Disjunction (w1 :: w2 :: ws) -> TWL_Map_Opt.add w2 ((TWL_Map_Opt.find w2 f_map) @ [clause]) (TWL_Map_Opt.add w1 ((TWL_Map_Opt.find w1 f_map) @ [clause]) f_map)
         | Disjunction ([w]) -> f_map
         | _ -> failwith "[Invalid argument] add_clause_to_map: argument not a clause";;
 
-let construct_map formula = add_all_keys formula formula TWL_Map.empty [];;
+let construct_map formula = add_all_keys formula formula TWL_Map_Opt.empty [];;
 
 (* removes unit clauses from the formula *)
 let rec preprocess_unit_clauses_rec formula new_formula new_assignment up_map prop to_update = 
@@ -1710,10 +1710,10 @@ let rec preprocess_unit_clauses_rec formula new_formula new_assignment up_map pr
                                                 | Disjunction (ys) -> preprocess_unit_clauses_rec (Formula (Conjunction (xs))) (new_formula @ [x]) new_assignment up_map prop to_update
                                                 | Atom (y) -> if (is_assigned (Assignment (new_assignment)) x)
                                                               then preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop to_update
-                                                              else preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) (to_update @ [x])
+                                                              else preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) (to_update @ [x])
                                                 | Not (Atom (y)) -> if (is_assigned (Assignment (new_assignment)) x)
                                                                     then preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop to_update
-                                                                    else preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) (to_update @ [x])
+                                                                    else preprocess_unit_clauses_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) (to_update @ [x])
                                                 | _ -> failwith "[Invalid argument] preprocess_unit_clauses_rec: formula not in CNF"
                                              )
         | _ -> failwith "[Invalid argument] preprocess_unit_clauses_rec: formula not in CNF";;
@@ -1979,12 +1979,12 @@ let rec preprocess_unit_clauses_inc_rec formula new_formula new_assignment up_ma
                                                                         | Inl (unsat_core) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), up_map, prop, true, s_state, to_update)
                                                                         | Inr (n_state) -> if (is_assigned (Assignment (new_assignment)) (Atom (y)))
                                                                                            then preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf n_state i_map inv_map to_update
-                                                                                           else preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Not (Atom (y)))])
+                                                                                           else preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Not (Atom (y)))])
                                                                    )
                                                               else (
                                                                     if (is_assigned (Assignment (new_assignment)) (Atom (y)))
                                                                     then preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf s_state i_map inv_map to_update
-                                                                    else preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf s_state i_map inv_map to_update
+                                                                    else preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf s_state i_map inv_map to_update
                                                                    )
                                                 | Not (Atom (y)) -> if is_proper_constraint y 
                                                                     then (
@@ -1992,12 +1992,12 @@ let rec preprocess_unit_clauses_inc_rec formula new_formula new_assignment up_ma
                                                                                 | Inl (unsat_core) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), up_map, prop, true, s_state, to_update)
                                                                                 | Inr (n_state) -> if (is_assigned (Assignment (new_assignment)) (Atom (y)))
                                                                                                    then preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf n_state i_map inv_map to_update
-                                                                                                   else preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Atom (y))])
+                                                                                                   else preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Atom (y))])
                                                                         )
                                                                     else (
                                                                           if (is_assigned (Assignment (new_assignment)) (Atom (y)))  
                                                                           then preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf s_state i_map inv_map to_update
-                                                                          else preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf s_state i_map inv_map to_update
+                                                                          else preprocess_unit_clauses_inc_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf s_state i_map inv_map to_update
                                                                          )
                                                 | _ -> failwith "[Invalid argument] preprocess_unit_clauses_inc_rec: formula not in CNF"
                                              )
@@ -2019,20 +2019,20 @@ let rec preprocess_unit_clauses_inc_i_rec formula new_formula new_assignment up_
                                                                                             | Inl (unsat_core) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), up_map, prop, true, s_state, to_update)
                                                                                             | Inr (n_state) -> if (is_assigned_i (Assignment (new_assignment)) (Atom (y)))
                                                                                                                then preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf n_state i_map inv_map to_update
-                                                                                                               else preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Not (Atom (y)))])
+                                                                                                               else preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Not (Atom (y)))])
                                                                                         )
                                                                     | Index (z) -> (
                                                                                          match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int z)) s_state with
                                                                                             | Inl (unsat_core) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), up_map, prop, true, s_state, to_update)
                                                                                             | Inr (n_state) -> if (is_assigned_i (Assignment (new_assignment)) (Atom (y)))
                                                                                                                then preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf n_state i_map inv_map to_update
-                                                                                                               else (preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Not (Atom (y)))]))
+                                                                                                               else (preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Not (Atom (y)))]))
                                                                                    )
                                                                    )
                                                               else (
                                                                     if (is_assigned_i (Assignment (new_assignment)) (Atom (y)))
                                                                     then preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf s_state i_map inv_map to_update
-                                                                    else ( preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf s_state i_map inv_map (to_update @ [(Not (Atom (y)))]))
+                                                                    else ( preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, true, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf s_state i_map inv_map (to_update @ [(Not (Atom (y)))]))
                                                                    )
                                                 | Not (Atom (y)) -> if is_proper_constraint y 
                                                                     then (
@@ -2042,7 +2042,7 @@ let rec preprocess_unit_clauses_inc_i_rec formula new_formula new_assignment up_
                                                                                                     | Inl (unsat_core) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), up_map, prop, true, s_state, to_update)
                                                                                                     | Inr (n_state) -> if (is_assigned_i (Assignment (new_assignment)) (Atom (y)))
                                                                                                                        then preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf n_state i_map inv_map to_update
-                                                                                                                       else preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Atom (y))])                  
+                                                                                                                       else preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Atom (y))])                  
                                                                                                )
                                                                            | Index (z) -> (
                                                                                            let (c, v, d, dl) = (Tseitin.Inv_Map.find z inv_map) in
@@ -2050,13 +2050,13 @@ let rec preprocess_unit_clauses_inc_i_rec formula new_formula new_assignment up_
                                                                                                 | Inl (unsat_core) -> (Formula (Conjunction (new_formula)), Assignment (new_assignment), up_map, prop, true, s_state, to_update)
                                                                                                 | Inr (n_state) -> if (is_assigned_i (Assignment (new_assignment)) (Atom (y)))
                                                                                                                    then preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf n_state i_map inv_map to_update
-                                                                                                                   else (preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Atom (y))]))
+                                                                                                                   else (preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf n_state i_map inv_map (to_update @ [(Atom (y))]))
                                                                                           )
                                                                         )
                                                                     else (
                                                                           if (is_assigned_i (Assignment (new_assignment)) (Atom (y)))  
                                                                           then preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula new_assignment up_map prop conf s_state i_map inv_map to_update
-                                                                          else (preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map.add (Printing.print_element x) (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf s_state i_map inv_map (to_update @ [(Atom (y))]))
+                                                                          else (preprocess_unit_clauses_inc_i_rec (Formula (Conjunction (xs))) new_formula (new_assignment @ [(y, false, false, 0)]) (UP_Map_Opt.add x (Disjunction ([])) up_map) (prop @ [(x, Disjunction ([]))]) conf s_state i_map inv_map (to_update @ [(Atom (y))]))
                                                                         )
                                                 | _ -> failwith "[Invalid argument] preprocess_unit_clauses_inc_rec: formula not in CNF"
                                              )
@@ -2075,24 +2075,24 @@ let rec decision_twl_inc formula assignment f_map up_map s_state i_map inv_map d
                                                         | Atom (x) -> if is_proper_constraint x
                                                                     then (
                                                                             match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Atom x) i_map))) s_state with
-                                                                                | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core unsat_core inv_map)])
+                                                                                | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), f_map, dl + 1, (UP_Map_Opt.add (Atom (x)) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core unsat_core inv_map)])
                                                                                 | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
-                                                                                                    (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction ([])) up_map), n_state, prop, conf)
+                                                                                                    (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, (UP_Map_Opt.add (Atom (x)) (Disjunction ([])) up_map), n_state, prop, conf)
                                                                         )
                                                                     else (  
                                                                             let (new_map, prop, conf) = update_watch_lists assignment f_map (Not (Atom (x))) in 
-                                                                                (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction ([])) up_map), s_state, prop, conf)
+                                                                                (Assignment (xs @ [(x, true, true, dl + 1)]), new_map, dl + 1, (UP_Map_Opt.add (Atom (x)) (Disjunction ([])) up_map), s_state, prop, conf)
                                                                         )
                                                         | Not (Atom (x)) -> if is_proper_constraint x
                                                                             then (
                                                                                 match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Not (Atom x)) i_map))) s_state with
-                                                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core unsat_core inv_map)])
+                                                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), f_map, dl + 1, (UP_Map_Opt.add (Not (Atom (x))) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core unsat_core inv_map)])
                                                                                     | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in 
-                                                                                                            (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction ([])) up_map), n_state, prop, conf)
+                                                                                                            (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, (UP_Map_Opt.add (Not (Atom (x))) (Disjunction ([])) up_map), n_state, prop, conf)
                                                                                 )
                                                                             else (
                                                                                 let (new_map, prop, conf) = update_watch_lists assignment f_map (Atom (x)) in
-                                                                                    (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction ([])) up_map), s_state, prop, conf) 
+                                                                                    (Assignment (xs @ [(x, false, true, dl + 1)]), new_map, dl + 1, (UP_Map_Opt.add (Not (Atom (x))) (Disjunction ([])) up_map), s_state, prop, conf) 
                                                                                 )
                                                         | _ -> failwith "[Invalid argument] decision_twl_inc: choose_decision_literal did not return a literal"
                                                 )
@@ -2149,19 +2149,19 @@ let rec decision_twl_inc_i_map formula assignment assigned_map f_map up_map s_st
                                                                           match x with 
                                                                             | Constraint (y) -> (
                                                                                                  match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Atom x) i_map))) s_state with
-                                                                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), assigned_map, f_map, dl + 1, (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)], false)
+                                                                                                    | Inl (unsat_core) -> (Assignment (xs @ [(x, true, true, dl + 1)]), assigned_map, f_map, dl + 1, (UP_Map_Opt.add (Atom (x)) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)], false)
                                                                                                     | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists_i assignment assigned_map f_map (Not (Atom (x))) in 
-                                                                                                                            (Assignment (xs @ [(x, true, true, dl + 1)]), assigned_map, new_map, dl + 1, (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction ([])) up_map), n_state, prop, conf, false)
+                                                                                                                            (Assignment (xs @ [(x, true, true, dl + 1)]), assigned_map, new_map, dl + 1, (UP_Map_Opt.add (Atom (x)) (Disjunction ([])) up_map), n_state, prop, conf, false)
                                                                                                 )   
                                                                             | Index (y) -> (
                                                                                             let (s, v, d, tmp_dl) = (Tseitin.Inv_Map.find y inv_map) in
                                                                                             match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int y)) s_state with
                                                                                                 | Inl (unsat_core) -> let (indexed, aux) = assigned_map in
-                                                                                                                      (Assignment (xs @ [(x, true, true, dl + 1)]), (Assignment_Map.add y true indexed, aux), f_map, dl + 1, (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)], false)
+                                                                                                                      (Assignment (xs @ [(x, true, true, dl + 1)]), (Assignment_Map.add y true indexed, aux), f_map, dl + 1, (UP_Map_Opt.add (Atom (x)) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)], false)
                                                                                                 | Inr (n_state) -> let (indexed, aux) = assigned_map in
                                                                                                                     let new_assigned_map = (Assignment_Map.add y true indexed, aux) in
                                                                                                                      let (new_map, prop, conf) = update_watch_lists_i assignment new_assigned_map f_map (Not (Atom (x))) in 
-                                                                                                                        (Assignment (xs @ [(x, true, true, dl + 1)]), new_assigned_map, new_map, dl + 1, (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction ([])) up_map), n_state, prop, conf, false)
+                                                                                                                        (Assignment (xs @ [(x, true, true, dl + 1)]), new_assigned_map, new_map, dl + 1, (UP_Map_Opt.add (Atom (x)) (Disjunction ([])) up_map), n_state, prop, conf, false)
                                                                                            )   
                                                                         )
                                                                     else (
@@ -2169,7 +2169,7 @@ let rec decision_twl_inc_i_map formula assignment assigned_map f_map up_map s_st
                                                                            let (indexed, aux) = assigned_map in
                                                                             let new_assigned_map = (indexed, Assignment_Map.add y true aux) in
                                                                              let (new_map, prop, conf) = update_watch_lists_i assignment new_assigned_map f_map (Not (Atom (x))) in 
-                                                                                 (Assignment (xs @ [(x, true, true, dl + 1)]), new_assigned_map, new_map, dl + 1, (UP_Map.add (Printing.print_element (Atom (x))) (Disjunction ([])) up_map), s_state, prop, conf, false)
+                                                                                 (Assignment (xs @ [(x, true, true, dl + 1)]), new_assigned_map, new_map, dl + 1, (UP_Map_Opt.add (Atom (x)) (Disjunction ([])) up_map), s_state, prop, conf, false)
                                                                         )
                                                         | [Not (Atom (x))] ->
                                                                             if is_proper_constraint x
@@ -2177,19 +2177,19 @@ let rec decision_twl_inc_i_map formula assignment assigned_map f_map up_map s_st
                                                                                   match x with
                                                                                     | Constraint (y) -> (
                                                                                                         match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Not (Atom x)) i_map))) s_state with
-                                                                                                            | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), assigned_map, f_map, dl + 1, (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)], false)
+                                                                                                            | Inl (unsat_core) -> (Assignment (xs @ [(x, false, true, dl + 1)]), assigned_map, f_map, dl + 1, (UP_Map_Opt.add (Not (Atom (x))) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)], false)
                                                                                                             | Inr (n_state) -> let (new_map, prop, conf) = update_watch_lists_i assignment assigned_map f_map (Atom (x)) in 
-                                                                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), assigned_map, new_map, dl + 1, (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction ([])) up_map), n_state, prop, conf, false) 
+                                                                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), assigned_map, new_map, dl + 1, (UP_Map_Opt.add (Not (Atom (x))) (Disjunction ([])) up_map), n_state, prop, conf, false) 
                                                                                                         )
                                                                                     | Index (y) -> (
                                                                                                     let (c, v, d, tmp_dl) = (Tseitin.Inv_Map.find y inv_map) in 
                                                                                                     match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Not (Atom c)) i_map))) s_state with
                                                                                                         | Inl (unsat_core) -> let (indexed, aux) = assigned_map in
-                                                                                                                             (Assignment (xs @ [(x, false, true, dl + 1)]), (Assignment_Map.add y false indexed, aux), f_map, dl + 1, (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)], false)
+                                                                                                                             (Assignment (xs @ [(x, false, true, dl + 1)]), (Assignment_Map.add y false indexed, aux), f_map, dl + 1, (UP_Map_Opt.add (Not (Atom (x))) (Disjunction ([])) up_map), s_state, [], [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)], false)
                                                                                                         | Inr (n_state) -> let (indexed, aux) = assigned_map in
                                                                                                                             let new_assigned_map = (Assignment_Map.add y false indexed, aux) in
                                                                                                                              let (new_map, prop, conf) = update_watch_lists_i assignment new_assigned_map f_map (Atom (x)) in 
-                                                                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_assigned_map, new_map, dl + 1, (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction ([])) up_map), n_state, prop, conf, false) 
+                                                                                                                                (Assignment (xs @ [(x, false, true, dl + 1)]), new_assigned_map, new_map, dl + 1, (UP_Map_Opt.add (Not (Atom (x))) (Disjunction ([])) up_map), n_state, prop, conf, false) 
                                                                                                    )
                                                                                 )
                                                                             else (
@@ -2197,7 +2197,7 @@ let rec decision_twl_inc_i_map formula assignment assigned_map f_map up_map s_st
                                                                                    let (indexed, aux) = assigned_map in
                                                                                     let new_assigned_map = (indexed, Assignment_Map.add y false aux) in
                                                                                      let (new_map, prop, conf) = update_watch_lists_i assignment new_assigned_map f_map (Atom (x)) in
-                                                                                      (Assignment (xs @ [(x, false, true, dl + 1)]), new_assigned_map, new_map, dl + 1, (UP_Map.add (Printing.print_element (Not (Atom (x)))) (Disjunction ([])) up_map), s_state, prop, conf, false) 
+                                                                                      (Assignment (xs @ [(x, false, true, dl + 1)]), new_assigned_map, new_map, dl + 1, (UP_Map_Opt.add (Not (Atom (x))) (Disjunction ([])) up_map), s_state, prop, conf, false) 
                                                                                 )
                                                         | _ -> failwith "[Invalid argument] decision_twl_inc: choose_decision_literal did not return a literal"
                                                 )
@@ -2214,39 +2214,39 @@ let rec unit_propagation_twl_inc assignment f_map up_map s_state i_map inv_map p
                         | Atom (y) -> if is_proper_constraint y 
                                       then (
                                             match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Atom y) i_map))) s_state with
-                                                | Inl (unsat_core) -> (Assignment (ys @ [(y, true, false, dl)]), f_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core (unsat_core) inv_map)])
+                                                | Inl (unsat_core) -> (Assignment (ys @ [(y, true, false, dl)]), f_map, (UP_Map_Opt.add x clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core (unsat_core) inv_map)])
                                                 | Inr (n_state) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map (Not (Atom (y))) in 
                                                                     (
                                                                     match conf with 
-                                                                        | [] -> unit_propagation_twl_inc (Assignment (ys @ [(y, true, false, dl)])) new_map (UP_Map.add (Printing.print_element x) clause up_map) n_state i_map inv_map (xs @ new_prop) dl
-                                                                        | z :: zs -> ((Assignment (ys @ [(y, true, false, dl)])), new_map, (UP_Map.add (Printing.print_element x) clause up_map), n_state, z :: zs)
+                                                                        | [] -> unit_propagation_twl_inc (Assignment (ys @ [(y, true, false, dl)])) new_map (UP_Map_Opt.add x clause up_map) n_state i_map inv_map (xs @ new_prop) dl
+                                                                        | z :: zs -> ((Assignment (ys @ [(y, true, false, dl)])), new_map, (UP_Map_Opt.add x clause up_map), n_state, z :: zs)
                                                                     )
                                             )
                                       else (
                                             let (new_map, new_prop, conf) = update_watch_lists assignment f_map (Not (Atom (y))) in 
                                             (
                                             match conf with 
-                                                | [] -> unit_propagation_twl_inc (Assignment (ys @ [(y, true, false, dl)])) new_map (UP_Map.add (Printing.print_element x) clause up_map) s_state i_map inv_map (xs @ new_prop) dl
-                                                | z :: zs -> ((Assignment (ys @ [(y, true, false, dl)])), new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, z :: zs)
+                                                | [] -> unit_propagation_twl_inc (Assignment (ys @ [(y, true, false, dl)])) new_map (UP_Map_Opt.add x clause up_map) s_state i_map inv_map (xs @ new_prop) dl
+                                                | z :: zs -> ((Assignment (ys @ [(y, true, false, dl)])), new_map, (UP_Map_Opt.add x clause up_map), s_state, z :: zs)
                                             )
                                            )
                         | Not (Atom (y)) -> if is_proper_constraint y 
                                                 then (
                                                         match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Not (Atom y)) i_map))) s_state with
-                                                            | Inl (unsat_core) -> (Assignment (ys @ [(y, false, false, dl)]), f_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core (unsat_core) inv_map)])
+                                                            | Inl (unsat_core) -> (Assignment (ys @ [(y, false, false, dl)]), f_map, (UP_Map_Opt.add x clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core (unsat_core) inv_map)])
                                                             | Inr (n_state) -> let (new_map, new_prop, conf) = update_watch_lists assignment f_map (Atom (y)) in 
                                                                                 ( 
                                                                                 match conf with
-                                                                                    | [] -> unit_propagation_twl_inc (Assignment (ys @ [(y, false, false, dl)])) new_map (UP_Map.add (Printing.print_element x) clause up_map) n_state i_map inv_map (xs @ new_prop) dl
-                                                                                    | z :: zs -> ((Assignment (ys @ [(y, false, false, dl)])), new_map, (UP_Map.add (Printing.print_element x) clause up_map), n_state, z :: zs)
+                                                                                    | [] -> unit_propagation_twl_inc (Assignment (ys @ [(y, false, false, dl)])) new_map (UP_Map_Opt.add x clause up_map) n_state i_map inv_map (xs @ new_prop) dl
+                                                                                    | z :: zs -> ((Assignment (ys @ [(y, false, false, dl)])), new_map, (UP_Map_Opt.add x clause up_map), n_state, z :: zs)
                                                                                 )
                                                         )
                                                 else (
                                                       let (new_map, new_prop, conf) = update_watch_lists assignment f_map (Atom (y)) in 
                                                         ( 
                                                         match conf with
-                                                            | [] -> unit_propagation_twl_inc (Assignment (ys @ [(y, false, false, dl)])) new_map (UP_Map.add (Printing.print_element x) clause up_map) s_state i_map inv_map (xs @ new_prop) dl
-                                                            | z :: zs -> ((Assignment (ys @ [(y, false, false, dl)])), new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, z :: zs)
+                                                            | [] -> unit_propagation_twl_inc (Assignment (ys @ [(y, false, false, dl)])) new_map (UP_Map_Opt.add x clause up_map) s_state i_map inv_map (xs @ new_prop) dl
+                                                            | z :: zs -> ((Assignment (ys @ [(y, false, false, dl)])), new_map, (UP_Map_Opt.add x clause up_map), s_state, z :: zs)
                                                         )
                                                     )
                         | _ -> failwith "[Invalid argument] unit_propagation_twl: list of propagation literals contains a non-literal element"
@@ -2264,30 +2264,30 @@ let rec unit_propagation_twl_inc_i_map assignment assigned_map f_map up_map s_st
                                             match y with 
                                                 | Constraint (z) -> (
                                                                      match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Atom y) i_map))) s_state with
-                                                                        | Inl (unsat_core) -> (Assignment (ys @ [(y, true, false, dl)]), assigned_map, f_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)])
+                                                                        | Inl (unsat_core) -> (Assignment (ys @ [(y, true, false, dl)]), assigned_map, f_map, (UP_Map_Opt.add x clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)])
                                                                         | Inr (n_state) -> let (new_map, new_prop, conf) = update_watch_lists_i assignment assigned_map f_map (Not (Atom (y))) in 
                                                                                             (
                                                                                             match conf with 
-                                                                                                | [] -> unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) n_state i_map inv_map (xs @ new_prop) dl
-                                                                                                | z :: zs -> ((Assignment (ys @ [(y, true, false, dl)])), assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, conf)
+                                                                                                | [] -> unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) assigned_map new_map (UP_Map_Opt.add x clause up_map) n_state i_map inv_map (xs @ new_prop) dl
+                                                                                                | z :: zs -> ((Assignment (ys @ [(y, true, false, dl)])), assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, conf)
                                                                                             )
                                                                     )
                                                 | Index (z) -> (
                                                                 let (s, v, d, tmp_dl) = (Tseitin.Inv_Map.find z inv_map) in
                                                                 match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int z)) s_state with
                                                                         | Inl (unsat_core) -> let (indexed, aux) = assigned_map in
-                                                                                             (Assignment (ys @ [(y, true, false, dl)]), (Assignment_Map.add z true indexed, aux), f_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)])
+                                                                                             (Assignment (ys @ [(y, true, false, dl)]), (Assignment_Map.add z true indexed, aux), f_map, (UP_Map_Opt.add x clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)])
                                                                         | Inr (n_state) -> let (indexed, aux) = assigned_map in
                                                                                             let new_assigned_map = (Assignment_Map.add z true indexed, aux) in
                                                                                             let (new_map, new_prop, conf) = update_watch_lists_i assignment new_assigned_map f_map (Not (Atom (y))) in 
                                                                                             (
                                                                                             match conf with 
                                                                                                 | [] -> if dl < 1 
-                                                                                                        then (unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) new_assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) n_state i_map inv_map (xs @ new_prop) dl)
-                                                                                                        else unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) new_assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) n_state i_map inv_map (xs @ new_prop) dl
+                                                                                                        then (unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) new_assigned_map new_map (UP_Map_Opt.add x clause up_map) n_state i_map inv_map (xs @ new_prop) dl)
+                                                                                                        else unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) new_assigned_map new_map (UP_Map_Opt.add x clause up_map) n_state i_map inv_map (xs @ new_prop) dl
                                                                                                 | z :: zs -> if dl < 1
-                                                                                                             then (((Assignment (ys @ [(y, true, false, dl)])), new_assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, conf))
-                                                                                                             else ((Assignment (ys @ [(y, true, false, dl)])), new_assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, conf)
+                                                                                                             then (((Assignment (ys @ [(y, true, false, dl)])), new_assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, conf))
+                                                                                                             else ((Assignment (ys @ [(y, true, false, dl)])), new_assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, conf)
                                                                                             )
                                                                )
                                             )
@@ -2299,11 +2299,11 @@ let rec unit_propagation_twl_inc_i_map assignment assigned_map f_map up_map s_st
                                             (
                                             match conf with 
                                                 | [] -> if dl < 1 
-                                                        then (unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) new_assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) s_state i_map inv_map (xs @ new_prop) dl)
-                                                        else unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) new_assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) s_state i_map inv_map (xs @ new_prop) dl
+                                                        then (unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) new_assigned_map new_map (UP_Map_Opt.add x clause up_map) s_state i_map inv_map (xs @ new_prop) dl)
+                                                        else unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, true, false, dl)])) new_assigned_map new_map (UP_Map_Opt.add x clause up_map) s_state i_map inv_map (xs @ new_prop) dl
                                                 | z :: zs -> if dl < 1
-                                                             then (((Assignment (ys @ [(y, true, false, dl)])), new_assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, conf))
-                                                             else ((Assignment (ys @ [(y, true, false, dl)])), new_assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, conf)
+                                                             then (((Assignment (ys @ [(y, true, false, dl)])), new_assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, conf))
+                                                             else ((Assignment (ys @ [(y, true, false, dl)])), new_assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, conf)
                                             )
                                            )
                         | Not (Atom (y)) -> if is_proper_constraint y 
@@ -2311,30 +2311,30 @@ let rec unit_propagation_twl_inc_i_map assignment assigned_map f_map up_map s_st
                                                       match y with
                                                         | Constraint (z) -> (
                                                                              match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Not (Atom y)) i_map))) s_state with
-                                                                                | Inl (unsat_core) -> (Assignment (ys @ [(y, false, false, dl)]), assigned_map, f_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)])
+                                                                                | Inl (unsat_core) -> (Assignment (ys @ [(y, false, false, dl)]), assigned_map, f_map, (UP_Map_Opt.add x clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)])
                                                                                 | Inr (n_state) -> let (new_map, new_prop, conf) = update_watch_lists_i assignment assigned_map f_map (Atom (y)) in 
                                                                                                     ( 
                                                                                                     match conf with
-                                                                                                        | [] -> unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) n_state i_map inv_map (xs @ new_prop) dl
-                                                                                                        | z :: zs -> ((Assignment (ys @ [(y, false, false, dl)])), assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, conf)
+                                                                                                        | [] -> unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) assigned_map new_map (UP_Map_Opt.add x clause up_map) n_state i_map inv_map (xs @ new_prop) dl
+                                                                                                        | z :: zs -> ((Assignment (ys @ [(y, false, false, dl)])), assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, conf)
                                                                                                     )
                                                                             )
                                                         | Index (z) -> (
                                                                         let (c, v, d, tmp_dl) = (Tseitin.Inv_Map.find z inv_map) in 
                                                                         match Simplex_Inc.assert_simplex Simplex_Inc.equal_nat (Simplex_Inc.nat_of_integer (Z.of_int (Tseitin.Index_Map_Opt.find (Not (Atom c)) i_map))) s_state with
                                                                             | Inl (unsat_core) -> let (indexed, aux) = assigned_map in
-                                                                                                    (Assignment (ys @ [(y, false, false, dl)]), (Assignment_Map.add z false indexed, aux), f_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)])
+                                                                                                    (Assignment (ys @ [(y, false, false, dl)]), (Assignment_Map.add z false indexed, aux), f_map, (UP_Map_Opt.add x clause up_map), s_state, [clauselist_to_neg_clause (convert_unsat_core_i unsat_core i_map inv_map)])
                                                                             | Inr (n_state) -> let (indexed, aux) = assigned_map in
                                                                                                let new_assigned_map = (Assignment_Map.add z false indexed, aux) in
                                                                                                let (new_map, new_prop, conf) = update_watch_lists_i assignment new_assigned_map f_map (Atom (y)) in 
                                                                                                 ( 
                                                                                                  match conf with
                                                                                                     | [] -> if dl < 1 
-                                                                                                            then (unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) new_assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) n_state i_map inv_map (xs @ new_prop) dl)
-                                                                                                            else unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) new_assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) n_state i_map inv_map (xs @ new_prop) dl
+                                                                                                            then (unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) new_assigned_map new_map (UP_Map_Opt.add x clause up_map) n_state i_map inv_map (xs @ new_prop) dl)
+                                                                                                            else unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) new_assigned_map new_map (UP_Map_Opt.add x clause up_map) n_state i_map inv_map (xs @ new_prop) dl
                                                                                                     | z :: zs -> if dl < 1
-                                                                                                                 then (((Assignment (ys @ [(y, false, false, dl)])), new_assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, conf))
-                                                                                                                 else ((Assignment (ys @ [(y, false, false, dl)])), new_assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, conf)
+                                                                                                                 then (((Assignment (ys @ [(y, false, false, dl)])), new_assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, conf))
+                                                                                                                 else ((Assignment (ys @ [(y, false, false, dl)])), new_assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, conf)
                                                                                                 )
                                                                        )
                                                      )
@@ -2346,11 +2346,11 @@ let rec unit_propagation_twl_inc_i_map assignment assigned_map f_map up_map s_st
                                                         ( 
                                                         match conf with
                                                             | [] -> if dl < 1
-                                                                    then (unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) new_assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) s_state i_map inv_map (xs @ new_prop) dl)
-                                                                    else unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) new_assigned_map new_map (UP_Map.add (Printing.print_element x) clause up_map) s_state i_map inv_map (xs @ new_prop) dl
+                                                                    then (unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) new_assigned_map new_map (UP_Map_Opt.add x clause up_map) s_state i_map inv_map (xs @ new_prop) dl)
+                                                                    else unit_propagation_twl_inc_i_map (Assignment (ys @ [(y, false, false, dl)])) new_assigned_map new_map (UP_Map_Opt.add x clause up_map) s_state i_map inv_map (xs @ new_prop) dl
                                                             | z :: zs -> if dl < 1
-                                                                         then (((Assignment (ys @ [(y, false, false, dl)])), new_assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, z :: zs))
-                                                                         else ((Assignment (ys @ [(y, false, false, dl)])), new_assigned_map, new_map, (UP_Map.add (Printing.print_element x) clause up_map), s_state, conf)
+                                                                         then (((Assignment (ys @ [(y, false, false, dl)])), new_assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, z :: zs))
+                                                                         else ((Assignment (ys @ [(y, false, false, dl)])), new_assigned_map, new_map, (UP_Map_Opt.add x clause up_map), s_state, conf)
                                                         )
                                                     )
                         | _ -> failwith "[Invalid argument] unit_propagation_twl: list of propagation literals contains a non-literal element"
@@ -3645,14 +3645,14 @@ let sat_inc_i_list (formula, cs, i_map, inv_map) =
 let sat_inc_i (formula, cs, i_map, inv_map, vsids) =
    let (tableau, cs) = (Util.to_simplex_format_inc_init cs i_map) in
     let state = Simplex_Inc.init_simplex (Simplex_Inc.equal_nat, Simplex_Inc.linorder_nat) tableau in
-    match (dpll_twl_inc_i formula UP_Map.empty i_map inv_map state [(-1, Simplex_Inc.checkpoint_simplex state)]) with
+    match (dpll_twl_inc_i formula UP_Map_Opt.empty i_map inv_map state [(-1, Simplex_Inc.checkpoint_simplex state)]) with
         | true -> printf "SAT "
         | false -> printf "UNSAT ";; 
 
 let sat_inc (formula, cs, i_map, inv_map) =
    let (tableau, cs) = (Util.to_simplex_format_inc_init cs i_map) in
     let state = Simplex_Inc.init_simplex (Simplex_Inc.equal_nat, Simplex_Inc.linorder_nat) tableau in
-    match (dpll_twl_inc formula UP_Map.empty i_map inv_map state [(-1, Simplex_Inc.checkpoint_simplex state)]) with
+    match (dpll_twl_inc formula UP_Map_Opt.empty i_map inv_map state [(-1, Simplex_Inc.checkpoint_simplex state)]) with
         | true -> printf "SAT "
         | false -> printf "UNSAT ";; 
 
@@ -3660,7 +3660,7 @@ let sat_inc (formula, cs, i_map, inv_map) =
 (****************************************************************************************************)
 
 let sat_twl formula = 
-    match (dpll_twl formula UP_Map.empty) with
+    match (dpll_twl formula UP_Map_Opt.empty) with
         | true -> printf "SAT "
         | false -> printf "UNSAT ";; 
 
