@@ -12,6 +12,9 @@ type less_equal = LessEq of num_type * num_type
                 | Less of num_type * num_type
                 | Eq of num_type * num_type;;
 
+(* The constructor RVar is only used as intermediate type for *)
+(* the parsing of smt2 format formulas. It never occurs in the *)
+(* final formula that is passed to DPLL *)
 type constraint_n = Constraint of less_equal
                   | Index of int
                   | AuxVar of int

@@ -1,4 +1,7 @@
 module Index_Map = Map.Make(String);;
+(* Index_Map_Opt uses the element type key instead of a String version *)
+(* of the atom like Index_Map. This is the map that is used throughout the *)
+(* solver now as it is more efficient. *)
 module Index_Map_Opt = Map.Make(struct type t = Types.element let compare = compare end);;
 module Inv_Map = Map.Make(struct type t = int let compare = compare end);;
 
@@ -332,8 +335,7 @@ let rec transform_elem_inc_i e cs i_map inv_map i n_aux n_last vsids =
                                                         )
                                        )
                               )
-        | Atom (x) -> (*let s = (Printing.print_constraint_n x) in *)
-                        if Index_Map_Opt.mem e i_map 
+        | Atom (x) ->  if Index_Map_Opt.mem e i_map 
                         then (
                               let ind = (Index_Map_Opt.find e i_map) in
                                 ([Disjunction ([Not (Atom (AuxVar n_aux)); Atom (Index ind)])] @ 

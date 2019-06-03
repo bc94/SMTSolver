@@ -160,10 +160,6 @@ let rec parse lexbuf opt =
                             | "simple" -> Util.time run_solver_simple value
                             | _ -> failwith "Unknown command line option"
                         ); 
-                         (*printf "Before Tseitin: \n\n";
-                        Printing.print_formula value;
-                        printf "\n\nAfter Tseitin \n\n";
-                        Printing.print_formula (Tseitin.tseitin_transformation value);*)
                         parse lexbuf opt
         | None -> ()
 
