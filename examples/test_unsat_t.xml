@@ -1,0 +1,1 @@
+<validity><disjunction><atom><less_equal><number>0</number><variable>Prearg6</variable></less_equal></atom><atom><less_equal><variable>Prearg6</variable><number>0</number></less_equal></atom></disjunction></validity>

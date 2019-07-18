@@ -722,41 +722,41 @@ let rec propagate formula_opt literal acc next_lit conf =
                                                )
         | _ -> failwith "[Invalid argument] propagate";;
 
-let rec exhaustive_propagate assignment formula_opt literal dl =
+let rec exhaustive_propagate rev_assignment formula_opt literal dl =
     match (propagate formula_opt literal [] [] false) with
         | (f_new, next_lit, true) -> (
-                                     let Assignment (xs) = assignment in match literal with
-                                        | Atom (x) -> ((Assignment (xs @ [(x, true, false, dl)])), f_new, true)
-                                        | Not (Atom (x)) -> ((Assignment (xs @ [(x, false, false, dl)])), f_new, true)
+                                     let Assignment (xs) = rev_assignment in match literal with
+                                        | Atom (x) -> ((Assignment ((x, true, false, dl) :: xs)), f_new, true)
+                                        | Not (Atom (x)) -> ((Assignment ((x, false, false, dl) :: xs)), f_new, true)
                                         | _ -> failwith "[Invalid argument] exhaustive_propagate: argument not a literal"
                                      )
         | (f_new, [], false) -> (
-                                 let Assignment (xs) = assignment in match literal with
-                                    | Atom (x) -> ((Assignment (xs @ [(x, true, false, dl)])), f_new, false)
-                                    | Not (Atom (x)) -> ((Assignment (xs @ [(x, false, false, dl)])), f_new, false)
+                                 let Assignment (xs) = rev_assignment in match literal with
+                                    | Atom (x) -> ((Assignment ((x, true, false, dl) :: xs)), f_new, false)
+                                    | Not (Atom (x)) -> ((Assignment ((x, false, false, dl) :: xs)), f_new, false)
                                     | _ -> failwith "[Invalid argument] exhaustive_propagate: argument not a literal"
                                 )
         | (f_new, next_lit, false) -> (
-                                     let Assignment (xs) = assignment in match literal with
-                                        | Atom (x) -> exhaustive_propagate (Assignment (xs @ [(x, true, false, dl)])) f_new (hd next_lit) dl
-                                        | Not (Atom (x)) -> exhaustive_propagate (Assignment (xs @ [(x, false, false, dl)])) f_new (hd next_lit) dl
+                                     let Assignment (xs) = rev_assignment in match literal with
+                                        | Atom (x) -> exhaustive_propagate (Assignment ((x, true, false, dl) :: xs)) f_new (hd next_lit) dl
+                                        | Not (Atom (x)) -> exhaustive_propagate (Assignment ((x, false, false, dl) :: xs)) f_new (hd next_lit) dl
                                         | _ -> failwith "[Invalid argument] exhaustive_propagate: argument not a literal"
                                      );;
 
-let rec unit_propagation assignment formula_it formula_opt dl = 
+let rec unit_propagation rev_assignment formula_it formula_opt dl = 
     match formula_it with 
-        | (Formula (Conjunction ([]))) -> (assignment, formula_opt, false)
+        | (Formula (Conjunction ([]))) -> (rev_assignment, formula_opt, false)
         | (Formula (Conjunction ((Disjunction (x)) :: xs))) -> (
                                                                 match (length x) with
-                                                                    | 1 -> exhaustive_propagate assignment formula_opt (hd x) dl
-                                                                    | _ -> unit_propagation assignment (Formula (Conjunction (xs))) formula_opt dl
+                                                                    | 1 -> exhaustive_propagate rev_assignment formula_opt (hd x) dl
+                                                                    | _ -> unit_propagation rev_assignment (Formula (Conjunction (xs))) formula_opt dl
                                                                )
-        | (Formula (Conjunction (x :: xs))) -> exhaustive_propagate assignment formula_opt x dl
+        | (Formula (Conjunction (x :: xs))) -> exhaustive_propagate rev_assignment formula_opt x dl
         | _ -> failwith "[Invalid argument] unit_propagation: formula not in cnf";;
 
-let rec exhaustive_unit_propagation assignment formula_opt dl =
-    let (xs, f_new, conf) = unit_propagation assignment formula_opt formula_opt dl in
-        match (compare xs assignment) with
+let rec exhaustive_unit_propagation rev_assignment formula_opt dl =
+    let (xs, f_new, conf) = unit_propagation rev_assignment formula_opt formula_opt dl in
+        match (compare xs rev_assignment) with
             | 0 -> (xs, f_new, conf)
             | _ -> (
                     match conf with
@@ -764,17 +764,17 @@ let rec exhaustive_unit_propagation assignment formula_opt dl =
                     | true -> (xs, f_new, conf)
                    );;
 
-let rec decision assignment formula_opt dl = 
+let rec decision rev_assignment formula_opt dl = 
     match formula_opt with 
         | (Formula (Conjunction ([]))) -> failwith "[Invalid argument] empty formula"
         | (Formula (Conjunction ((Disjunction (x)) :: xs))) -> (
                                                                 match (length x) with
-                                                                    | 1 -> exhaustive_propagate assignment formula_opt (hd x) dl
-                                                                    | _ -> let (Assignment (ys)) = assignment in let (f_new, next_lit, conf) = propagate formula_opt (hd x) [] [] false in
+                                                                    | 1 -> exhaustive_propagate rev_assignment formula_opt (hd x) dl
+                                                                    | _ -> let (Assignment (ys)) = rev_assignment in let (f_new, next_lit, conf) = propagate formula_opt (hd x) [] [] false in
                                                                            (
                                                                             match (hd x) with 
-                                                                                | Atom (y) -> ((Assignment (ys @ [(y, true, true, dl + 1)])), f_new, conf)
-                                                                                | Not (Atom (y)) -> ((Assignment (ys @ [(y, false, true, dl + 1)])), f_new, conf)
+                                                                                | Atom (y) -> ((Assignment ((y, true, true, dl + 1) :: ys)), f_new, conf)
+                                                                                | Not (Atom (y)) -> ((Assignment ((y, false, true, dl + 1) :: ys)), f_new, conf)
                                                                                 | _ -> failwith "[Invalid argument] decision: formula not in CNF"
                                                                            )
                                                                )
@@ -869,8 +869,8 @@ let rec find_backjump_clause_l_i (assignment : (constraint_n * bool * bool * int
 
 (* Get target decision level for backjumping. *)
 (* Relies on increasing order of decision levels in the assignment *)
-let rec get_decision_level (assignment : (constraint_n * bool * bool * int) list) literal = 
-    match assignment with
+let rec get_decision_level (rev_assignment : (constraint_n * bool * bool * int) list) literal = 
+    match rev_assignment with
     | [] -> failwith "[Invalid argument] get_decision_level: literal not in assignment list"
     | x :: xs -> (
                   match (x) with
@@ -991,6 +991,11 @@ let get_current_decision_level assignment =
                                 | (c, v, d, dl) -> dl 
                              );;
 
+let get_current_decision_level_rev rev_assignment = 
+    match rev_assignment with 
+        | Assignment ([]) -> failwith "[Invalid argument] get_current_decision_level_rev"
+        | Assignment ((c, v, d, dl) :: xs) -> dl;;
+
 (* The following backjump functions take the backjump clause and compute the new assignment *)
 
 let rec backjump_rec assignment dl clause ls = 
@@ -1069,21 +1074,21 @@ let backjump assignment formula =
                                   | _ -> failwith "[Invalid argument] backjump: find_backjump_clause did not return a clause"
                                 );;
 
-let rec backtrack_rec assignment dl ls =
-    match assignment with
+let rec backtrack_rec rev_assignment dl =
+    match rev_assignment with
         | Assignment ([]) -> failwith "[Invalid argument] backtrack: assignment list does not contain literals of current decision level"
         | Assignment ((c, v, d, l) :: xs) -> (
                                               match (compare dl l) with
                                                 | 0 -> (
                                                         match (v, d) with
-                                                            | (true, true) -> ls @ [(c, false, false, (l - 1))]
-                                                            | (false, true) -> ls @ [(c, true, false, (l - 1))]
-                                                            | (_, false) -> failwith "[Invalid argument] backtrack: assignment list does not contain a decision literal of current decision level"
+                                                            | (true, true) -> (c, false, false, (l - 1)) :: xs
+                                                            | (false, true) -> (c, true, false, (l - 1)) :: xs
+                                                            | (_, false) -> backtrack_rec (Assignment xs) dl
                                                        )
-                                                | _ -> backtrack_rec (Assignment (xs)) dl (ls @ [(c, v, d, l)])
+                                                | _ -> backtrack_rec (Assignment (xs)) dl
                                              );;
 
-let backtrack assignment dl = Assignment (backtrack_rec assignment dl []);;
+let backtrack rev_assignment dl = Assignment (backtrack_rec rev_assignment dl);;
 
 let rec remove_literal_from_clause clause literal acc = 
     match clause with 
@@ -1134,10 +1139,10 @@ let rec reconstruct_formula_opt assignment formula_opt =
 (* satisfied clause has been removed to make most of the function *)
 (* calls in the procedure more efficient *)
 
-let rec dpll_rec assignment formula formula_opt dl =
+let rec dpll_rec rev_assignment formula formula_opt dl =
     match (model_found formula_opt) with
     | true -> (
-               match (Util.to_simplex_format_init assignment) with 
+               match (Util.to_simplex_format_init rev_assignment) with 
                             | (sf_assignment, cs) -> ( 
                                                       match Simplex.simplex sf_assignment with
                                                         | Some (x) -> true
@@ -1145,7 +1150,7 @@ let rec dpll_rec assignment formula formula_opt dl =
                                                      )
               )
     | false -> (
-                let (xs, f_new, conf) = (unit_propagation assignment formula_opt formula_opt dl) in 
+                let (xs, f_new, conf) = (unit_propagation rev_assignment formula_opt formula_opt dl) in 
                     match conf with 
                         | true -> ( 
                                    match (has_decision_literals xs) with 
@@ -1160,9 +1165,9 @@ let rec dpll_rec assignment formula formula_opt dl =
                                         *)
                                   )
                         | false -> (
-                                    match (compare assignment xs) with
+                                    match (compare rev_assignment xs) with
                                         | 0 -> (
-                                                match (decision assignment f_new dl) with
+                                                match (decision rev_assignment f_new dl) with
                                                     | (ys, f_new_d, false) -> dpll_rec ys formula f_new_d (dl + 1)
                                                     | (ys, _, true) -> ( let zs = backtrack ys (dl + 1) in 
                                                                          dpll_rec zs formula (reconstruct_formula_opt ys formula) (get_current_decision_level zs)
@@ -1183,6 +1188,8 @@ and dpll formula = dpll_rec (Assignment ([])) formula formula 0
 
 and restart formula = dpll formula;;
 
+(* Unused and incorrect *)
+(*
 let rec dpll_inc_rec assignment formula formula_opt dl =
     match (model_found formula_opt) with
     | true -> (
@@ -1236,6 +1243,7 @@ let rec dpll_inc_rec assignment formula formula_opt dl =
 and dpll_inc formula = dpll_inc_rec (Assignment ([])) formula formula 0
 
 and restart_inc formula = dpll_inc formula;;
+*)
 
 (**********************************************)
 (* Two-watched-literal implementation         *)
