@@ -1,0 +1,54 @@
+# Installed packages for system:
+base-bigarray            base  Bigarray library distributed with the OCaml compi
+base-bytes               base  Bytes library distributed with the OCaml compiler
+base-ocamlbuild          base  OCamlbuild binary and libraries distributed with 
+base-threads             base  Threads library distributed with the OCaml compil
+base-unix                base  Unix library distributed with the OCaml compiler
+bin_prot            113.33.03  A binary protocol generator
+conf-gmp                    1  Virtual package relying on a GMP lib system insta
+conf-m4                     1  Virtual package relying on m4
+conf-perl                   1  Virtual package relying on perl
+core                113.33.03  Industrial strength alternative to OCaml's standa
+core_kernel         113.33.03  Industrial strength alternative to OCaml's standa
+cppo                    1.6.5  Equivalent of the C preprocessor for OCaml progra
+cppo_ocamlbuild         1.6.0  ocamlbuild support for cppo, OCaml-friendly sourc
+depext                  1.0.5  Query and install external dependencies of OPAM p
+dune                    1.2.1  Fast, portable and opinionated build system
+fieldslib           113.33.03  Syntax extension to define first class values rep
+jbuilder           transition  This is a transition package, jbuilder is now nam
+js-build-tools      113.33.04  Collection of tools to help building Jane Street 
+menhir               20180905  LR(1) parser generator
+ocamlbuild                  0  Build system distributed with the OCaml compiler 
+ocamlfind               1.8.0  A library manager for OCaml
+ppx_assert          113.33.03  Assert-like extension nodes that raise useful err
+ppx_bench           113.33.03  Syntax extension for writing in-line benchmarks i
+ppx_bin_prot        113.33.03  Generation of bin_prot readers and writers from t
+ppx_compare         113.33.03  Generation of comparison functions from types
+ppx_core            113.33.03  Standard library for ppx rewriters
+ppx_custom_printf   113.33.03  Printf-style format-strings for user-defined stri
+ppx_deriving            4.1.5  Type-driven code generation for OCaml >=4.02
+ppx_driver          113.33.04  Feature-full driver for OCaml AST transformers
+ppx_enumerate       113.33.03  Generate a list containing all values of a finite
+ppx_expect          113.33.03  Cram like framework for OCaml
+ppx_fail            113.33.03  Add location to calls to failwiths
+ppx_fields_conv     113.33.03  Generation of accessor and iteration functions fo
+ppx_here            113.33.03  Expands [%here] into its location
+ppx_inline_test     113.33.03  Syntax extension for writing in-line tests in oca
+ppx_jane            113.33.03  Standard Jane Street ppx rewriters
+ppx_let             113.33.03  Monadic let-bindings
+ppx_optcomp         113.33.03  Optional compilation for OCaml
+ppx_pipebang        113.33.03  A ppx rewriter that inlines reverse application o
+ppx_sexp_conv       113.33.03  Generation of S-expression conversion functions f
+ppx_sexp_message    113.33.03  A ppx rewriter for easy construction of s-express
+ppx_sexp_value      113.33.03  A ppx rewriter that simplifies building s-express
+ppx_tools          5.0+4.02.0  Tools for authors of ppx rewriters and other synt
+ppx_type_conv       113.33.03  Support Library for type-driven code generators
+ppx_typerep_conv    113.33.03  Generation of runtime types from type declaration
+ppx_variants_conv   113.33.03  Generation of accessor and iteration functions fo
+re                      1.8.0  RE is a regular expression library for OCaml
+result                    1.3  Compatibility Result module
+seq                       0.1  Compatibility package for OCaml's standard iterat
+sexplib             113.33.03  Library for serializing OCaml values to and from 
+typerep             113.33.03  typerep is a library for runtime types.
+variantslib         113.33.03  Part of Jane Street's Core library
+zarith                    1.7  Implements arithmetic and logical operations over
